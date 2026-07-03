@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>萬華協力聯盟 · 4 個重點畫面 Wireframes</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    background: #f0eee6;
+    color: #1f1f1f;
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .page-title { font-size: 22px; margin-bottom: 6px; }
+  .page-sub { font-size: 13px; color: #6b6b6b; margin-bottom: 24px; }
+  .section-title { font-size: 18px; margin: 30px 0 12px; padding: 10px 14px; background: #2d7a4a; color: #fff; border-radius: 6px; }
+  .section-sub { font-size: 13px; color: #555; margin-bottom: 14px; padding-left: 4px; }
+
+  /* Phone frame for mobile screens */
+  .phone {
+    width: 380px; min-height: 720px; background: #fff;
+    border-radius: 32px; padding: 20px 18px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    border: 8px solid #1f1f1f;
+    position: relative;
+    margin: 0 auto;
+  }
+  .phone-notch { width: 100px; height: 18px; background: #1f1f1f; border-radius: 0 0 14px 14px; margin: -20px auto 12px; }
+
+  /* Browser frame for web screens */
+  .browser {
+    background: #fff; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    border: 1px solid #d8d4c5;
+    margin: 0 auto;
+  }
+  .browser-bar { background: #ebe9e0; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #d8d4c5; }
+  .browser-dots { display: flex; gap: 5px; }
+  .browser-dot { width: 11px; height: 11px; border-radius: 50%; background: #d8d4c5; }
+  .browser-dot.red { background: #ed6a5e; }
+  .browser-dot.yellow { background: #f5bd4f; }
+  .browser-dot.green { background: #61c554; }
+  .browser-url { background: #fff; padding: 4px 12px; border-radius: 14px; font-size: 11px; color: #555; flex: 1; max-width: 380px; margin-left: 8px; }
+
+  /* Common UI */
+  .nav-back { font-size: 22px; color: #555; cursor: pointer; }
+  .header-title { font-size: 17px; font-weight: 600; margin: 8px 0 12px; }
+  .header-sub { font-size: 12px; color: #6b6b6b; margin-top: -8px; margin-bottom: 14px; }
+  .label { font-size: 12px; font-weight: 600; color: #444; margin: 12px 0 6px; }
+  .input, .select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #d8d4c5;
+    border-radius: 8px; font-size: 14px; background: #fff;
+  }
+  .input:focus { border-color: #2d7a4a; outline: none; }
+  .input.has-value { background: #f9fcfa; border-color: #2d7a4a; }
+  .btn {
+    width: 100%; padding: 12px; background: #2d7a4a; color: #fff;
+    border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+    margin-top: 14px; cursor: pointer;
+  }
+  .btn-sec {
+    background: #fff; color: #2d7a4a; border: 1.5px solid #2d7a4a;
+  }
+  .btn-danger { background: #b54141; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; background: #e8f4ec; color: #1f5f33;
+    border-radius: 14px; font-size: 12px; font-weight: 600;
+    margin: 3px 4px 3px 0;
+  }
+  .chip-x { color: #1f5f33; cursor: pointer; font-weight: 700; opacity: 0.5; }
+
+  .alert-success { background: #ebf7ee; color: #1f5f33; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; border-left: 3px solid #2d7a4a; margin: 8px 0; }
+  .alert-error { background: #fdecec; color: #b54141; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; border-left: 3px solid #b54141; margin: 8px 0; }
+  .alert-warn { background: #fff5d6; color: #8a5a00; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; border-left: 3px solid #e3a72b; margin: 8px 0; }
+
+  .table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  .table th { text-align: left; padding: 8px 10px; background: #f3f0e7; border-bottom: 1.5px solid #d8d4c5; font-weight: 600; }
+  .table td { padding: 8px 10px; border-bottom: 1px solid #ece9df; }
+  .table tr.alt td { background: #fcfbf6; }
+  .table .cross { background: #fff5d6; }
+
+  /* Camera mockup */
+  .camera-view {
+    position: relative; background: #1f1f1f; color: #fff;
+    height: 280px; border-radius: 12px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    margin: 8px 0;
+  }
+  .camera-view::before {
+    content: '⬜ Camera preview'; color: #888; font-size: 13px;
+  }
+  .scan-frame {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 200px; height: 100px; border: 2px solid #61ff8d;
+    border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+  }
+  .scan-corner { position: absolute; width: 14px; height: 14px; border: 3px solid #61ff8d; }
+  .scan-corner.tl { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+  .scan-corner.tr { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+  .scan-corner.bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+  .scan-corner.br { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+  .scan-hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; color: #fff; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0; }
+  .stat-box { background: #f9fcfa; padding: 10px 8px; border-radius: 8px; text-align: center; border: 1px solid #d6e7d9; }
+  .stat-num { font-size: 18px; font-weight: 700; color: #2d7a4a; }
+  .stat-num.warn { color: #8a5a00; }
+  .stat-label { font-size: 10.5px; color: #555; margin-top: 2px; }
+
+  .scan-list { background: #fcfbf6; border-radius: 6px; max-height: 130px; overflow-y: auto; margin-top: 8px; }
+  .scan-item { padding: 6px 10px; font-size: 12px; border-bottom: 1px solid #ece9df; display: flex; justify-content: space-between; align-items: center; }
+  .scan-item:last-child { border-bottom: none; }
+  .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+  .badge-own { background: #e8f4ec; color: #1f5f33; }
+  .badge-cross { background: #fff5d6; color: #8a5a00; }
+
+  /* Web admin pieces */
+  .web-content { padding: 24px 28px; min-height: 600px; }
+  .crumb { font-size: 12px; color: #6b6b6b; margin-bottom: 6px; }
+  .web-title { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .web-sub { color: #6b6b6b; font-size: 13px; margin-bottom: 18px; }
+  .summary-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .summary-card { background: #f9fcfa; padding: 14px; border-radius: 8px; border: 1px solid #d6e7d9; }
+  .summary-card .v { font-size: 22px; font-weight: 700; color: #2d7a4a; }
+  .summary-card .l { font-size: 12px; color: #555; margin-top: 4px; }
+  .panel { background: #fff; border: 1px solid #e6e3da; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; }
+  .panel h3 { font-size: 14px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #ece9df; display: flex; justify-content: space-between; align-items: center; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #2d7a4a; background: #fff; color: #2d7a4a; cursor: pointer; }
+  .btn-sm.primary { background: #2d7a4a; color: #fff; }
+  .btn-sm.danger { background: #fff; color: #b54141; border-color: #b54141; }
+
+  /* Bar chart mockup */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 12px; }
+  .bar-label { width: 100px; }
+  .bar-track { flex: 1; height: 16px; background: #ece9df; border-radius: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #2d7a4a; border-radius: 8px; }
+  .bar-val { width: 50px; text-align: right; font-weight: 600; color: #555; }
+
+  /* annotation */
+  .anno {
+    background: #fffdf2; color: #5a4500; border: 1px dashed #e3a72b;
+    padding: 8px 12px; border-radius: 6px; font-size: 12px;
+    margin: 12px 0;
+  }
+  .anno b { color: #8a5a00; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start; }
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">萬華協力聯盟 · 待用券系統 — 4 個重點畫面 Wireframes</h1>
+<p class="page-sub">R1 MVP 的核心畫面 UI 參考。給 Claude Code 視覺對齊用。</p>
+
+<!-- ============== M6 第一次上傳 ============== -->
+<h2 class="section-title">畫面 1 — M6 第一次上傳：發券給個案 (Mobile)</h2>
+<p class="section-sub">★ STEP 2 的核心。NGO 代表發券「之前」必須先在系統內紀錄「這張流水號要發給哪家店的哪位個案」。這是補款計算的 source of truth。</p>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+  <span class="nav-back">‹</span>
+  <div class="header-title">發券給個案</div>
+  <div class="header-sub">2026 年 6 月</div>
+
+  <div class="label">① 選擇店家</div>
+  <select class="select has-value" disabled>
+    <option>阿婆魯肉飯 (本月已發 12 張)</option>
+  </select>
+
+  <div class="label">② 選擇個案</div>
+  <input class="input has-value" value="王小明（A1234*****）" disabled>
+
+  <div class="label">③ 輸入流水號（可連續加入）</div>
+  <input class="input" placeholder="5 位數字，例：27031">
+
+  <div style="margin-top:8px;">
+    <span class="chip">27031 <span class="chip-x">×</span></span>
+    <span class="chip">27032 <span class="chip-x">×</span></span>
+    <span class="chip">27033 <span class="chip-x">×</span></span>
+  </div>
+
+  <div class="alert-error">⚠ 流水號 27031 本月已指派給「李美麗」，請確認</div>
+
+  <div class="label">④ 預覽指派</div>
+  <table class="table">
+    <thead><tr><th>流水號</th><th>店家</th><th>個案</th></tr></thead>
+    <tbody>
+      <tr><td>27031</td><td>阿婆魯肉飯</td><td>王小明</td></tr>
+      <tr class="alt"><td>27032</td><td>阿婆魯肉飯</td><td>王小明</td></tr>
+      <tr><td>27033</td><td>阿婆魯肉飯</td><td>王小明</td></tr>
+    </tbody>
+  </table>
+
+  <button class="btn">確認發放 (共 3 張)</button>
+</div>
+
+<div class="anno"><b>UI 重點：</b>分四步驟由上而下流程化 / 已選店家 + 已選個案以「鎖定」狀態顯示 / 流水號用 chip 累加便於刪除 / 預覽表確認後送出。<b>錯誤即時顯示</b>（同流水號當月已指派）。</div>
+
+<!-- ============== M7 第二次上傳 ============== -->
+<h2 class="section-title">畫面 2 — M7 第二次上傳：月底回收 + 即時結算 (Mobile)</h2>
+<p class="section-sub">★ STEP 4 的核心。NGO 代表到店家收券、用相機掃描流水號（R2）或手動輸入（R1）。系統即時比對對應表、標示他店券、累計補款金額。</p>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+  <span class="nav-back">‹</span>
+  <div class="header-title">月底回收</div>
+  <div class="header-sub">店家：阿婆魯肉飯 · 2026 年 6 月</div>
+
+  <div class="camera-view">
+    <div class="scan-frame">
+      <div class="scan-corner tl"></div>
+      <div class="scan-corner tr"></div>
+      <div class="scan-corner bl"></div>
+      <div class="scan-corner br"></div>
+    </div>
+    <div class="scan-hint">對準流水號方框</div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-num">12</div><div class="stat-label">已掃張數</div></div>
+    <div class="stat-box"><div class="stat-num">10</div><div class="stat-label">本店券</div></div>
+    <div class="stat-box"><div class="stat-num warn">2</div><div class="stat-label">他店券</div></div>
+  </div>
+
+  <div class="alert-warn"><b>目前累計補款：NT$ 200</b>（2 張他店券 × 100）</div>
+
+  <div class="label">已掃流水號</div>
+  <div class="scan-list">
+    <div class="scan-item"><span>27045</span><span class="badge badge-own">本店</span></div>
+    <div class="scan-item"><span>27044</span><span class="badge badge-own">本店</span></div>
+    <div class="scan-item"><span>26120</span><span class="badge badge-cross">他店 · 老王麵店</span></div>
+    <div class="scan-item"><span>27043</span><span class="badge badge-own">本店</span></div>
+    <div class="scan-item"><span>26088</span><span class="badge badge-cross">他店 · 阿珠便當</span></div>
+    <div class="scan-item"><span>27042</span><span class="badge badge-own">本店</span></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-sec">手動輸入</button>
+    <button class="btn">完成回收</button>
+  </div>
+</div>
+
+<div class="anno"><b>UI 重點：</b>相機 viewfinder 在最上方一目了然 / 3 個統計大數字即時更新 / 補款金額用黃色 alert 強調 / 已掃列表用 badge 區分本店/他店 / 完成按鈕跳到 M8 結算頁。R1 沒相機時主畫面換成數字鍵盤 + 「手動輸入流水號」。</div>
+
+<!-- ============== W6 結算詳情 ============== -->
+<h2 class="section-title">畫面 3 — W6 結算詳情 + CSV 下載 (Web Admin / 立心)</h2>
+<p class="section-sub">★ STEP 5 的核心。立心檢視月度結算單，逐 NGO 代表審核，可下載 CSV 用於對帳與銀行匯款。</p>
+
+<div class="browser" style="max-width: 1000px;">
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <div class="browser-dot red"></div><div class="browser-dot yellow"></div><div class="browser-dot green"></div>
+    </div>
+    <div class="browser-url">app.wanhua-vouchers.org/settlements/2026-06/sarah-chen</div>
+  </div>
+  <div class="web-content">
+    <div class="crumb">結算單 · 2026-06 · </div>
+    <div class="web-title">2026 年 6 月結算單 — 陳莎拉 (勵馨基金會)</div>
+    <div class="web-sub">產生於 6/30 · 待審核 <span style="background:#fff5d6;color:#8a5a00;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:4px;">PENDING REVIEW</span></div>
+
+    <div class="summary-row">
+      <div class="summary-card"><div class="v">NT$ 8,200</div><div class="l">下月預付總額</div></div>
+      <div class="summary-card"><div class="v">NT$ 600</div><div class="l">本月補款總額</div></div>
+      <div class="summary-card"><div class="v" style="color:#1f5f33;">NT$ 8,800</div><div class="l">應匯總額</div></div>
+      <div class="summary-card"><div class="v">5</div><div class="l">負責店家數</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>店家分配明細
+        <button class="btn-sm">⬇ 下載 CSV</button>
+      </h3>
+      <table class="table">
+        <thead>
+          <tr><th>店家</th><th>下月需求 (張)</th><th>下月預付</th><th>本月他店券 (張)</th><th>本月補款</th><th>合計</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>阿婆魯肉飯</td><td>20</td><td>NT$ 2,000</td><td>2</td><td>NT$ 200</td><td><b>NT$ 2,200</b></td></tr>
+          <tr class="alt"><td>老王麵店</td><td>15</td><td>NT$ 1,500</td><td>0</td><td>—</td><td><b>NT$ 1,500</b></td></tr>
+          <tr><td>阿珠便當</td><td>18</td><td>NT$ 1,800</td><td>3</td><td>NT$ 300</td><td><b>NT$ 2,100</b></td></tr>
+          <tr class="alt"><td>李記小吃</td><td>15</td><td>NT$ 1,500</td><td>1</td><td>NT$ 100</td><td><b>NT$ 1,600</b></td></tr>
+          <tr><td>阿明咖啡</td><td>14</td><td>NT$ 1,400</td><td>0</td><td>—</td><td><b>NT$ 1,400</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3>他店券明細 (補款計算依據)</h3>
+      <table class="table">
+        <thead><tr><th>流水號</th><th>原指派店家</th><th>現在出現於</th><th>原指派個案</th><th>金額</th></tr></thead>
+        <tbody>
+          <tr class="cross"><td>26120</td><td>老王麵店</td><td>阿婆魯肉飯</td><td>陳大明</td><td>NT$ 100</td></tr>
+          <tr class="cross"><td>26088</td><td>李記小吃</td><td>阿婆魯肉飯</td><td>林美玲</td><td>NT$ 100</td></tr>
+          <tr class="cross"><td>26201</td><td>阿婆魯肉飯</td><td>阿珠便當</td><td>張小華</td><td>NT$ 100</td></tr>
+          <tr class="cross"><td>26202</td><td>阿婆魯肉飯</td><td>阿珠便當</td><td>張小華</td><td>NT$ 100</td></tr>
+          <tr class="cross"><td>26350</td><td>阿明咖啡</td><td>阿珠便當</td><td>王小明</td><td>NT$ 100</td></tr>
+          <tr class="cross"><td>26088</td><td>阿珠便當</td><td>李記小吃</td><td>李美麗</td><td>NT$ 100</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="btn-row" style="margin-top:18px;">
+      <button class="btn-sm danger">退回 (附原因)</button>
+      <button class="btn-sm primary">審核通過 → 進入匯款流程</button>
+    </div>
+  </div>
+</div>
+
+<div class="anno"><b>UI 重點：</b>4 大數字總覽 / 兩個 panel 拆「店家分配明細」(NGO 代表會帶這份去店家發現金) 與「他店券明細」(補款的證據) / <b>CSV 下載按鈕在面板右上角顯眼處</b> / 底部審核 actions。退回需附原因 → 跳 modal 輸入。</div>
+
+<!-- ============== M10 + W8 雙視角儀表板 ============== -->
+<h2 class="section-title">畫面 4 — M10 + W8 雙視角儀表板</h2>
+<p class="section-sub">★ STEP 6 的核心。NGO 代表看「我的個案使用紀錄」（mobile）；立心看「全域使用情況」（web）— 同一份資料兩種視角。</p>
+
+<div class="grid-2">
+
+  <!-- M10 mobile -->
+  <div>
+    <h3 style="font-size:14px;margin-bottom:10px;color:#555;">M10 — NGO 代表手機：個案使用紀錄</h3>
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <span class="nav-back">‹</span>
+      <div class="header-title">個案使用紀錄</div>
+      <div class="header-sub">勵馨基金會 · 2026 年 6 月</div>
+
+      <select class="select has-value" style="margin-bottom:14px;">
+        <option>本月 (2026-06)</option>
+      </select>
+
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num">23</div><div class="stat-label">個案</div></div>
+        <div class="stat-box"><div class="stat-num">86</div><div class="stat-label">用券張數</div></div>
+        <div class="stat-box"><div class="stat-num">5</div><div class="stat-label">店家</div></div>
+      </div>
+
+      <table class="table" style="margin-top:10px;">
+        <thead><tr><th>個案</th><th>張數</th><th>店家</th></tr></thead>
+        <tbody>
+          <tr><td>王小明</td><td>5</td><td>阿婆魯肉飯, 阿珠便當</td></tr>
+          <tr class="alt"><td>李美麗</td><td>4</td><td>李記小吃</td></tr>
+          <tr><td>陳大明</td><td>4</td><td>老王麵店</td></tr>
+          <tr class="alt"><td>張小華</td><td>3</td><td>阿婆魯肉飯</td></tr>
+          <tr><td>林美玲</td><td>3</td><td>阿婆魯肉飯</td></tr>
+          <tr class="alt"><td>...</td><td colspan="2">滑動看更多</td></tr>
+        </tbody>
+      </table>
+
+      <button class="btn btn-sec" style="margin-top:14px;">⬇ 匯出 CSV</button>
+    </div>
+  </div>
+
+  <!-- W8 web -->
+  <div>
+    <h3 style="font-size:14px;margin-bottom:10px;color:#555;">W8 — 立心 Web：全域使用情況</h3>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots">
+          <div class="browser-dot red"></div><div class="browser-dot yellow"></div><div class="browser-dot green"></div>
+        </div>
+        <div class="browser-url">app.wanhua-vouchers.org/dashboard</div>
+      </div>
+      <div class="web-content" style="padding:18px 22px;">
+        <div class="web-title" style="font-size:18px;">全域使用情況</div>
+        <div class="web-sub" style="margin-bottom:12px;">2026 年 6 月 · 全部 NGOs / 店家</div>
+
+        <div class="summary-row" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="summary-card"><div class="v">387</div><div class="l">本月用券</div></div>
+          <div class="summary-card"><div class="v" style="color:#8a5a00;">42</div><div class="l">跨店使用</div></div>
+          <div class="summary-card"><div class="v">11%</div><div class="l">跨店比例</div></div>
+        </div>
+
+        <div class="panel">
+          <h3>各店家本月用量</h3>
+          <div class="bar-row"><span class="bar-label">阿婆魯肉飯</span><div class="bar-track"><div class="bar-fill" style="width:85%;"></div></div><span class="bar-val">92 張</span></div>
+          <div class="bar-row"><span class="bar-label">阿珠便當</span><div class="bar-track"><div class="bar-fill" style="width:70%;"></div></div><span class="bar-val">75 張</span></div>
+          <div class="bar-row"><span class="bar-label">老王麵店</span><div class="bar-track"><div class="bar-fill" style="width:60%;"></div></div><span class="bar-val">65 張</span></div>
+          <div class="bar-row"><span class="bar-label">李記小吃</span><div class="bar-track"><div class="bar-fill" style="width:55%;"></div></div><span class="bar-val">58 張</span></div>
+          <div class="bar-row"><span class="bar-label">阿明咖啡</span><div class="bar-track"><div class="bar-fill" style="width:48%;"></div></div><span class="bar-val">52 張</span></div>
+        </div>
+
+        <div class="panel">
+          <h3>各 NGO 用量</h3>
+          <div class="bar-row"><span class="bar-label">勵馨基金會</span><div class="bar-track"><div class="bar-fill" style="width:90%;"></div></div><span class="bar-val">120 張</span></div>
+          <div class="bar-row"><span class="bar-label">立心基金會</span><div class="bar-track"><div class="bar-fill" style="width:75%;"></div></div><span class="bar-val">98 張</span></div>
+          <div class="bar-row"><span class="bar-label">伊甸基金會</span><div class="bar-track"><div class="bar-fill" style="width:60%;"></div></div><span class="bar-val">82 張</span></div>
+          <div class="bar-row"><span class="bar-label">家扶基金會</span><div class="bar-track"><div class="bar-fill" style="width:45%;"></div></div><span class="bar-val">62 張</span></div>
+        </div>
+
+        <div class="panel" style="background:#fff5d6;border-color:#f0d99a;">
+          <h3 style="color:#8a5a00;">⚠ 跨店使用偏高的店家</h3>
+          <div style="font-size:12.5px;color:#5a4500;">
+            <b>阿珠便當</b>：本月收到 75 張，其中 18 張 (24%) 是他店券 → 建議下月增加配額<br>
+            <b>李記小吃</b>：本月收到 58 張，其中 12 張 (21%) 是他店券 → 建議下月增加配額
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="anno"><b>UI 重點：</b>同樣的資料兩種視角 — NGO 代表只看自己 NGO 的個案層級 / 立心看跨 NGO 跨店的全域趨勢。R2 的「持續被跨店使用」警示用黃色 panel 凸顯，幫立心發現「該店配額需要重新分配」的問題。</div>
+
+<p style="margin-top:40px;font-size:12px;color:#888;text-align:center;">這份是 visual mockup，視覺色彩 / 字級可依品牌調整。資料模型與互動行為以 docs/screens.md 為準。</p>
+
+</body>
+</html>

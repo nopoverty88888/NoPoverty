@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>萬華協力聯盟 · 待用券系統 · 流程圖與 Story Map (v2)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    background: #fafaf7;
+    color: #1f1f1f;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 28px 80px; }
+  header { border-bottom: 1px solid #e6e3da; padding-bottom: 18px; margin-bottom: 24px; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: 0.3px; }
+  .sub { color: #6b6b6b; font-size: 13px; }
+  .version { display: inline-block; background: #2d7a4a; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 6px; vertical-align: middle; }
+  h2 { font-size: 16px; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #ece9df; }
+  h3 { font-size: 13px; margin: 18px 0 6px; color: #4a4a4a; font-weight: 600; }
+  p { font-size: 13.5px; color: #333; }
+  small { color: #7a7a7a; }
+
+  /* Legend */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin: 10px 0 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fff; border: 1px solid #e6e3da; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .r1 { background: #2d7a4a; }
+  .r2 { background: #e07b1a; }
+  .r3 { background: #9a6dd7; }
+  .new { background: #e8385d; }
+
+  /* Roles */
+  .roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0 6px; }
+  .role-card { background: #fff; border: 1px solid #e6e3da; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; }
+  .role-card b { display: block; font-size: 13.5px; margin-bottom: 4px; }
+  .role-card .who { color: #6b6b6b; font-size: 12px; }
+  .role-card .merge { background: #fff5cc; border: 1px solid #f0d99a; color: #8a5a00; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; margin-left: 4px; }
+
+  /* Confirmed decisions */
+  .decisions { background: #f1f9f3; border: 1px solid #c8e1d0; border-radius: 10px; padding: 12px 18px; margin: 10px 0; }
+  .decisions ol { margin: 6px 0; padding-left: 20px; }
+  .decisions li { font-size: 12.5px; margin: 5px 0; color: #1f1f1f; }
+  .decisions li b { color: #2d7a4a; }
+
+  /* Swimlane */
+  .swim-scroll { overflow-x: auto; border: 1px solid #e6e3da; border-radius: 10px; background: #fff; }
+  .swim { display: grid;
+    grid-template-columns: 130px repeat(6, minmax(170px, 1fr));
+    min-width: 1150px;
+  }
+  .swim .head, .swim .role, .swim .cell {
+    border-right: 1px solid #ece9df;
+    border-bottom: 1px solid #ece9df;
+    padding: 10px 11px;
+    font-size: 12px;
+  }
+  .swim .head {
+    background: #f3f0e7;
+    font-weight: 600;
+    font-size: 12px;
+    color: #2a2a2a;
+    text-align: center;
+    border-bottom: 1px solid #d8d4c5;
+  }
+  .swim .head .step-num { display: block; color: #9a8d63; font-size: 10.5px; font-weight: 700; margin-bottom: 2px; letter-spacing: 1px; }
+  .swim .role {
+    background: #faf8f0;
+    font-weight: 600;
+    font-size: 13px;
+    color: #2a2a2a;
+    border-right: 2px solid #d8d4c5;
+    display: flex; align-items: center; flex-direction: column; justify-content: center;
+  }
+  .swim .role small { display: block; color: #8a8a8a; font-weight: 400; font-size: 11px; margin-top: 2px; text-align: center; }
+  .swim .cell { background: #fff; color: #2a2a2a; }
+  .swim .cell.empty { background: #fcfbf6; color: #c7c0aa; text-align: center; }
+  .swim .cell ul { margin: 0; padding-left: 16px; }
+  .swim .cell li { margin: 2px 0; }
+  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
+  .tag.new { background: #fde6ec; color: #b21e3e; border: 1px solid #f4b9c9; }
+  .tag.pain { background: #fff3d6; color: #8a5a00; border: 1px solid #f0d99a; }
+
+  /* Story Map */
+  .map-scroll { overflow-x: auto; border: 1px solid #e6e3da; border-radius: 10px; background: #fff; margin-top: 8px; }
+  .map { display: grid; grid-template-columns: repeat(6, minmax(180px, 1fr)); min-width: 1150px; }
+  .map .col-head { background: #f3f0e7; padding: 10px 12px; font-weight: 600; font-size: 12.5px; border-bottom: 1px solid #d8d4c5; border-right: 1px solid #ece9df; text-align: center; }
+  .map .col-head .step-num { display: block; color: #9a8d63; font-size: 10.5px; font-weight: 700; margin-bottom: 2px; letter-spacing: 1px; }
+  .map .col { padding: 10px 8px; border-right: 1px solid #ece9df; min-height: 200px; }
+  .map .col:last-child { border-right: none; }
+  .card { background: #fff; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; border-left: 3px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .card.r1 { border-left-color: #2d7a4a; background: #f1f9f3; }
+  .card.r2 { border-left-color: #e07b1a; background: #fdf5ec; }
+  .card.r3 { border-left-color: #9a6dd7; background: #f6f1fc; }
+  .card .who { display: block; font-size: 10.5px; color: #6b6b6b; margin-bottom: 2px; font-weight: 600; }
+  .card .want { color: #1f1f1f; }
+
+  /* Release summaries */
+  .releases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 10px; }
+  .release-card { background: #fff; border: 1px solid #e6e3da; border-radius: 10px; padding: 14px 16px; }
+  .release-card.r1 { border-top: 4px solid #2d7a4a; }
+  .release-card.r2 { border-top: 4px solid #e07b1a; }
+  .release-card.r3 { border-top: 4px solid #9a6dd7; }
+  .release-card b { font-size: 13.5px; display: block; margin-bottom: 6px; }
+  .release-card p { margin: 0 0 8px; font-size: 12.5px; color: #333; }
+  .release-card .goal { font-style: italic; color: #555; font-size: 12px; border-left: 2px solid #ddd; padding-left: 8px; margin: 6px 0 0; }
+
+  /* Open Qs */
+  .q-list { background: #fff; border: 1px solid #e6e3da; border-radius: 10px; padding: 12px 18px; }
+  .q-list ol { margin: 6px 0; padding-left: 20px; }
+  .q-list li { font-size: 13px; margin: 8px 0; }
+  .q-list li .why { display: block; color: #6b6b6b; font-size: 11.5px; margin-top: 2px; }
+
+  /* Pain insight box */
+  .insight { background: #fff8e6; border-left: 3px solid #e3a72b; padding: 10px 14px; border-radius: 4px; margin: 10px 0; font-size: 12.5px; color: #5a4500; }
+  .insight b { color: #8a5a00; }
+  .formula { background: #fff; border: 1px dashed #e3a72b; padding: 6px 10px; border-radius: 4px; display: inline-block; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: #5a4500; }
+
+  @media (max-width: 800px) {
+    .roles, .releases { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>萬華協力聯盟 · 待用券管理系統 — 流程圖 + Story Map <span class="version">v10 資料模型確定</span></h1>
+  <div class="sub">Planning v1 · 4 個角色 · 6 階段 · 兩個 Release · 含資料模型 + 金流方向 (立心 → NGO 代表 → 店家)</div>
+</header>
+
+<!-- ============== CONFIRMED DECISIONS ============== -->
+<h2>1. 已對齊的決定 (v2 更新)</h2>
+<div class="decisions">
+<ol>
+  <li><b>券單價：</b>每張券固定 NT$ 100</li>
+  <li><b>角色合併：</b>NGO 與 NGO 代表合併為「NGO 代表」（一個人同時填單位需求、分券給個案、月底跑店補款）</li>
+  <li><b>補款金流：</b>由 NGO 代表現場帶現金補給店家（v1 不需要金流模組）</li>
+  <li><b>代表–店家關係：</b>一個 NGO 代表可能負責多家店 → 月底回收 UI 需支援多店切換</li>
+  <li><b>未用券處理：</b>自動折抵下月配額（不作廢、不重發）</li>
+  <li><b>個案資料：</b>個案沒有帳號，只是 NGO 系統中的一筆資料</li>
+  <li><b>店家入口：</b>店家完全被動，全部由 NGO 代表代為操作（v1 不做店家 portal）</li>
+  <li><b>券流水號設計：</b>立心統一發放，但<b>流水號沒有任何編碼邏輯</b>（例如 NO. 27031 純流水）→ 系統無法從券號直接推斷店家，<b>完全依賴 NGO 代表上傳的對應表</b>。</li>
+  <li><b>系統不追蹤庫存：</b>NGO 代表手上會有跨月累積的實體券（不回收），但<b>系統不管庫存狀態</b>。系統只紀錄「個案領了哪些券」與「店家收到哪些券」，未上傳的券就不存在系統中。</li>
+  <li><b>結算金流方向：</b>NGO 代表現場用現金補給店家 → 店家開收據給 NGO 代表 → NGO 代表拿收據向立心請款。</li>
+  <li><b>立心每月一次性付款：</b>立心一個月只匯一次款，把「下月預付各店家」+「上月還 NGO 代表現金」<b>合併為一筆匯款</b>，發生在月底結算階段 (STEP 5)。</li>
+  <li><b>立心發券給 NGO 代表是純線下動作：</b>不進系統。系統第一次「看見」券是在 NGO 代表發券給個案時的第一次上傳。</li>
+  <li><b>兩次上傳設計（核心架構）：</b><br>
+    <span style="display:inline-block;margin-top:4px;">① <b>第一次上傳（發券前）：</b>NGO 代表上傳「流水號 → 屬於哪家店 → 發給哪個個案 → 發幾張」</span><br>
+    <span style="display:inline-block;">② <b>第二次上傳（月底收券）：</b>用<b>相機掃描</b>店家收到的所有券，系統自動比對第一次上傳的紀錄 → 標示他店券 → 算補款 → 也能反查哪些個案使用了券</span>
+  </li>
+  <li><b>個案資料：</b>NGO 代表先上傳個案名單到系統建檔，發券時用查詢的方式選個案。系統不需管「分券給個案的邏輯」（每月幾張、誰可以拿等等都不管）。</li>
+  <li><b>NGO 代表–店家關係：</b>每月固定，不輪替。</li>
+  <li><b>跨 NGO 用券：</b>v1 假設不會發生（NGO A 的個案不會持 NGO B 領到的券）。</li>
+  <li><b>機構用印處系統不管：</b>誰蓋章、什麼時機蓋都不追蹤。</li>
+  <li><b>個案不需要身分驗證</b>，也不會發生「店家用印處未蓋章」的容錯情境（一定會蓋）。</li>
+  <li><b>個案資訊欄位：</b>姓名 + 所屬 NGO + <b>身分證字號</b>（需注意資安儲存）。</li>
+  <li><b>立心月度結算單可下載 CSV</b>，用於對帳與審核 NGO 代表的請款收據。</li>
+  <li><b>需求視角已確認：</b>NGO 想知道「我的個案使用了哪些券」；立心想看「全部待用券的使用情況」（個別 NGO 視角 + 全域視角都要做）。</li>
+  <li><b>券月份戳的時機：</b>未發出的券<b>沒有月份</b>（空白），月份是 NGO 代表發放給個案時才寫上去 → 系統內<b>所有上傳的券都是當月發、當月用</b>，無「跨月剩券」的問題。</li>
+  <li><b>身分證字號儲存方式：</b>明碼（v1 採此方案）。<i>備註：未來若有資安考量可改為加密 / 後 4 碼遮罩。</i></li>
+  <li><b>第二次上傳相機只讀流水號：</b>不識別店家章圖像。NGO 代表先手動選自己現在在哪家店，相機只負責讀流水號數字。</li>
+  <li><b>OCR 技術選型：</b>使用<b>手機原生 OCR</b>（iOS Vision Framework / Android ML Kit），<b>不需要 AI API</b>。離線運作、免費、適合「統一印刷紅色 5 位數 + 流水號印兩次」的情境，可雙位置交叉比對提升準確率。未來如實測準確率 < 90%，再加雲端 API（Google Vision / Claude / GPT-4o Vision）作為 fallback。</li>
+  <li><b>資料建立權限：</b>個案 + 店家 由 <b>NGO 代表自行建立</b>（在自己負責的範圍內）；NGO 代表帳號由 <b>立心建立</b>（不開放自助註冊）。</li>
+  <li><b>金流方向（v10 修正）：</b>立心 → NGO 代表 → 店家（單一鏈）。立心不直接付店家，所有給店家的錢（下月預付 + 他店券補款）統一給 NGO 代表，NGO 代表帶現金分發給負責的店家。</li>
+  <li><b>結算單算法：</b>立心每月給每位 NGO 代表的金額 = Σ (該代表負責店家的下月預付 100×張數) + Σ (該代表負責店家的本月他店券 100×張數)。</li>
+  <li><b>收據上傳：</b>NGO 代表交付現金給店家後拍照上傳（含收據照片 + 收到日期）；立心可檢視所有收據用於對帳，但不負責上傳。</li>
+  <li><b>立心 = admin + 自家 NGO 代表 雙重身份：</b>立心基金會本身也是參與計畫的 NGO，有自己負責的店家與個案。所以立心人員擁有 admin 全域權限 (建帳號、審核結算、看全 NGO 資料) <b>＋</b> 對自家 NGO 的 NGO 代表功能 (建個案/店家、發券、月底回收、上傳收據)。系統上他們是 <code>role='lixin'</code> 但 <code>ngo_id = 立心 NGO</code> 的 user。</li>
+  <li><b>發佈方式：PWA (漸進式網頁 App)，不上 App Store / Play Store。</b>單一 Next.js 專案，NGO 代表用手機瀏覽器「加到主畫面」就能像 native app 一樣用。OCR 用 Tesseract.js (browser-side)。<br><i>好處：省 Apple Dev fee ($99/year)、不用過審核、改版即時生效、單一 codebase。</i></li>
+</ol>
+</div>
+
+<h2>1.5 資料模型 (Schema 概要)</h2>
+<div style="background:#fff; border:1px solid #e6e3da; border-radius:10px; padding:14px 18px; font-size:12.5px;">
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr style="background:#f3f0e7;">
+      <th style="text-align:left; padding:6px 8px; border-bottom:1px solid #d8d4c5;">資料表</th>
+      <th style="text-align:left; padding:6px 8px; border-bottom:1px solid #d8d4c5;">主要欄位</th>
+      <th style="text-align:left; padding:6px 8px; border-bottom:1px solid #d8d4c5;">由誰建立</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>users</b></td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">name, email, role, ngo_id</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">立心</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>ngos</b></td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">name, contact</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">立心</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>cases</b> (個案)</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">name, id_number (明碼), ngo_id</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">NGO 代表</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>stores</b> (店家)</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">name, address, owner_ngo_rep_id</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">NGO 代表</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>monthly_demands</b> (月度需求表)</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">year_month, ngo_id, store_id, quantity</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">NGO 代表</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>voucher_assignments</b> (流水號發放紀錄 = 第一次上傳)</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">serial_number, store_id, case_id, year_month</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">NGO 代表</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>voucher_collections</b> (月底回收紀錄 = 第二次上傳)</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">serial_number, collected_at_store_id, year_month, scanned_at</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">NGO 代表</td></tr>
+    <tr><td style="padding:6px 8px; border-bottom:1px solid #ece9df;"><b>settlements</b> (立心月度結算單)</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">year_month, ngo_rep_id, prepay_amount, compensation_amount, total</td><td style="padding:6px 8px; border-bottom:1px solid #ece9df;">系統自動產生</td></tr>
+    <tr><td style="padding:6px 8px;"><b>receipts</b> (收據上傳紀錄)</td><td style="padding:6px 8px;">photo_url, received_date, store_id, ngo_rep_id, amount</td><td style="padding:6px 8px;">NGO 代表</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============== PHYSICAL VOUCHER ============== -->
+<h2>1.5 實體券資訊 (從照片觀察)</h2>
+<div style="background:#fff; border:1px solid #e6e3da; border-radius:10px; padding:14px 18px; font-size:13px;">
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li>名稱：<b>「待用餐券」(Voucher) NT$ 100</b>，標語「牽起社區關係」</li>
+    <li>流水號：<b>NO. 27031 樣式</b>（5 位純數字，無店家編碼），同號出現兩次（正面右上 + 左側備註欄上方）</li>
+    <li>欄位：<b>月份</b>欄 (右上)、<b>店家用印處</b> (中間左圓)、<b>機構用印處</b> (中間右圓)、<b>備註</b>欄 (左側)</li>
+    <li>條件：「<b>當月使用、逾期無效</b>」、「<b>未蓋店家與機構章者無效</b>」</li>
+    <li>啟示：實體券已印好<b>無法重印</b>，所有「店家 / 個案」資訊都得透過系統紀錄</li>
+  </ul>
+</div>
+
+<div class="insight" style="background:#eef4fb; border-left-color:#3a73b8; color:#1f3a5f; margin-top:14px;">
+  <b style="color:#1f3a5f;">兩次上傳的心智模型</b><br>
+  立心拿到實體券 → 派發給 NGO 代表（線下、不入系統）→ NGO 代表決定「這張券要發給哪家店的個案」並蓋機構章 → <b>① 上傳對應表</b>（流水號 → 店家 → 個案）→ 個案拿券到店家 → 店家蓋章兌換 → 月底 NGO 代表去店家收券 → <b>② 相機掃描上傳</b> → 系統比對：<i>店家實際收到的券 vs. 第一次上傳的對應表</i> → 自動算補款 + 反查個案使用紀錄。
+  <br><br>
+  <b>系統不追蹤實體券庫存。</b>未上傳的券就是 NGO 代表手上的紙片，系統不知道也不需要知道。
+</div>
+
+<!-- ============== ROLES ============== -->
+<h2>2. 角色定義 (v2 合併後 4 個)</h2>
+<div class="roles">
+  <div class="role-card"><b>立心基金會</b><span class="who">統籌者</span><br><small>蒐集需求、預付店家、產券、發券給各 NGO 代表、總結算</small></div>
+  <div class="role-card"><b>NGO 代表</b><span class="merge">合併</span><span class="who">單位窗口</span><br><small>填單位對店家的需求 → 把券分給個案 → 月底到負責店家補款</small></div>
+  <div class="role-card"><b>店家</b><span class="who">合作餐廳 (被動)</span><br><small>蓋章認證、提供餐點、月底由 NGO 代表代操結算</small></div>
+  <div class="role-card"><b>個案</b><span class="who">弱勢使用者 (無帳號)</span><br><small>持券到指定店家兌換餐點，僅作為系統中的紀錄</small></div>
+</div>
+
+<!-- ============== INSIGHT ============== -->
+<div class="insight">
+  <b>關鍵痛點與補款公式：</b>因為券是「預付制」，券上指定的店家已經先收到錢。個案若拿 A 店券去 B 店用 → B 店出餐但沒拿到錢 → 月底 NGO 代表帶現金補給 B 店。
+  <br>
+  <div class="formula">補款給某店家 = 該店家收到的「他店券」張數 × NT$ 100</div>
+</div>
+
+<!-- ============== SWIMLANE FLOW ============== -->
+<h2>3. 月度循環 · 四角色平行流程 (Swimlane)</h2>
+<p style="font-size:12.5px;color:#555;">一個月為一個循環，下圖呈現每個角色在每個階段的動作。<span class="tag new">新</span> 標示為三項新功能會介入的環節，<span class="tag pain">痛</span> 標示目前最耗時的環節。</p>
+
+<div class="swim-scroll">
+<div class="swim">
+  <div class="head">角色 \ 階段</div>
+  <div class="head"><span class="step-num">STEP 1</span>月初 · 需求統計</div>
+  <div class="head"><span class="step-num">STEP 2</span>券分配給個案</div>
+  <div class="head"><span class="step-num">STEP 3</span>個案兌換</div>
+  <div class="head"><span class="step-num">STEP 4</span>月底 · 回收登記</div>
+  <div class="head"><span class="step-num">STEP 5</span>結算 + 月度一次性匯款</div>
+  <div class="head"><span class="step-num">STEP 6</span>下月規劃</div>
+
+  <!-- 立心 -->
+  <div class="role">立心<small>Coordinator</small></div>
+  <div class="cell"><ul><li>發送需求表給各 NGO 代表</li><li>彙整總量</li></ul></div>
+  <div class="cell empty">—</div>
+  <div class="cell empty">—</div>
+  <div class="cell empty">—</div>
+  <div class="cell"><ul><li><b>★ 月度一次性結算：</b></li><li>預付下月各店家 (張數 × 100)</li><li>+ 還款給 NGO 代表 (依收據)</li><li>合併為一筆匯款</li></ul></div>
+  <div class="cell"><ul><li>檢視本月用量 / 單位差異</li><li>調整下月配額</li></ul></div>
+
+  <!-- NGO 代表 (merged) -->
+  <div class="role">NGO 代表<small>合併角色</small></div>
+  <div class="cell"><ul><li>填寫單位對各店家需求量</li></ul></div>
+  <div class="cell"><ul><li>① <b>發券前上傳</b>：流水號 + 店家 + 個案 + 張數<span class="tag new">新1+2</span></li><li>查詢個案 → 選擇要發給誰</li><li>蓋機構章 → 發實體券給個案</li></ul></div>
+  <div class="cell empty">—</div>
+  <div class="cell"><ul><li>到負責店家收券<span class="tag pain">痛</span></li><li>② <b>月底相機掃描上傳</b><span class="tag new">新3</span></li><li>系統自動比對「對應表」找出他店券</li></ul></div>
+  <div class="cell"><ul><li>系統自動算補款 (他店券 × 100)</li><li>反查哪些個案使用了券<span class="tag new">新1</span></li><li>現場帶現金補給店家</li><li>跟店家拿收據 → 之後給立心請款</li></ul></div>
+  <div class="cell"><ul><li>根據個案實際用量回報下月需求</li></ul></div>
+
+  <!-- 個案 -->
+  <div class="role">個案<small>無帳號</small></div>
+  <div class="cell empty">—</div>
+  <div class="cell"><ul><li>從 NGO 代表領到實體券</li></ul></div>
+  <div class="cell"><ul><li>持券到店家兌換餐點</li><li>(理想：去券上指定店家)</li></ul></div>
+  <div class="cell empty">—</div>
+  <div class="cell empty">—</div>
+  <div class="cell empty">—</div>
+
+  <!-- 店家 -->
+  <div class="role">店家<small>被動</small></div>
+  <div class="cell empty">—</div>
+  <div class="cell empty">—</div>
+  <div class="cell"><ul><li>個案出示券 → 店家於「店家用印處」蓋章</li><li>出餐</li><li>(不論券原先指派給誰都接受)</li></ul></div>
+  <div class="cell"><ul><li>把整月收到的券交給 NGO 代表</li></ul></div>
+  <div class="cell"><ul><li>收下 NGO 代表現金補款 (若有他店券)</li><li>開立收據給 NGO 代表</li><li>從立心收到「下月預付款」匯款</li></ul></div>
+  <div class="cell empty">—</div>
+</div>
+</div>
+
+<!-- ============== STORY MAP ============== -->
+<h2>4. User Story Map · 依 Release 切片</h2>
+<div class="legend">
+  <span class="chip"><span class="dot r1"></span>Release 1 — MVP：建立兩次上傳骨架</span>
+  <span class="chip"><span class="dot r2"></span>Release 2 — 相機掃描 + 體驗優化</span>
+  <span class="chip"><span class="dot new"></span>標示為文件中提到的三項新功能</span>
+</div>
+
+<div class="map-scroll">
+<div class="map">
+  <!-- Column heads -->
+  <div class="col-head"><span class="step-num">STEP 1</span>需求統計</div>
+  <div class="col-head"><span class="step-num">STEP 2</span>分配給個案</div>
+  <div class="col-head"><span class="step-num">STEP 3</span>個案兌換</div>
+  <div class="col-head"><span class="step-num">STEP 4</span>月底回收</div>
+  <div class="col-head"><span class="step-num">STEP 5</span>結算 + 一次性匯款</div>
+  <div class="col-head"><span class="step-num">STEP 6</span>下月規劃</div>
+
+  <!-- Col 1: 需求統計 -->
+  <div class="col">
+    <div class="card r1"><span class="who">立心</span><span class="want">每月開啟線上需求表給 NGO 代表</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">填寫對各店家的券數量</span></div>
+    <div class="card r1"><span class="who">立心</span><span class="want">即時看到各店家彙總總量</span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want">填寫時可看上月實際使用量參考</span></div>
+  </div>
+
+  <!-- Col 2: 分配 (FIRST UPLOAD) -->
+  <div class="col">
+    <div class="card r1" style="font-weight:600;background:#e8f5ec;border-left-color:#1f5f33;"><span class="who">★ 第一次上傳</span><span class="want">發券前：流水號 → 店家 → 個案</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">建立 / 維護個案名單 (姓名、所屬 NGO、身分證字號)</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">查詢個案 → 選擇要發給誰</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">指派：流水號 + 店家 + 個案 + 張數<span class="tag new">新1+2</span></span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">蓋機構章 → 把實體券發給個案 (線下)</span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want">CSV / Excel 批次上傳流水號 (省手 key)</span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want">用個案姓名查詢過去領券紀錄</span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want">用相機掃描流水號上傳 (取代手 key)</span></div>
+  </div>
+
+  <!-- Col 3: 兌換 -->
+  <div class="col">
+    <div class="card r1"><span class="who">個案</span><span class="want">持券到店家、店家於「店家用印處」蓋店章 → 出餐</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">兌換動作不進系統，純線下行為</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">「是否被使用」靠第二次上傳推論</span></div>
+  </div>
+
+  <!-- Col 4: 月底回收 (SECOND UPLOAD) -->
+  <div class="col">
+    <div class="card r1" style="font-weight:600;background:#fff0e0;border-left-color:#a64d00;"><span class="who">★ 第二次上傳</span><span class="want">月底掃描店家收到的券</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">選擇要登記的店家 (今天要跑哪家)</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">手動輸入流水號 (R1 基本款)</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">比對第一次上傳對應表 → 自動標示他店券</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">即時顯示：要補多少錢給此店</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">反查：哪些個案使用了這些券<span class="tag new">新1</span></span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want"><b>相機掃描流水號</b>（店家由 NGO 代表手動選）<span class="tag new">新3</span></span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want">一次連續掃多張的快速模式</span></div>
+    <div class="card r2"><span class="who">NGO 代表</span><span class="want">掃描失敗時的手動補正流程</span></div>
+  </div>
+
+  <!-- Col 5: 結算 + 一次性匯款 -->
+  <div class="col">
+    <div class="card r1" style="font-weight:600;background:#fff0e0;border-left-color:#a64d00;"><span class="who">★ NGO 代表現場補款</span><span class="want">現金 → 店家</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">系統自動算補款 = 他店券張數 × 100</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">看到該店本月結算單 (券號清單 + 補款金額)</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">現場交付現金給店家</span></div>
+    <div class="card r1"><span class="who">店家</span><span class="want">開立收據給 NGO 代表 (紙本)</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">拍照 / 上傳店家收據</span></div>
+
+    <div class="card r1" style="font-weight:600;background:#e8f5ec;border-left-color:#1f5f33;margin-top:10px;"><span class="who">★ 立心月度單次匯款</span><span class="want">一次付清「預付＋還款」</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">產生立心月度結算單：</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">＝ Σ (每家店下月預付 NT$100×張數)</span></div>
+    <div class="card r1"><span class="who">系統</span><span class="want">＋ Σ (每位 NGO 代表本月墊付金額)</span></div>
+    <div class="card r1"><span class="who">立心</span><span class="want">下載月度結算單為 <b>CSV</b> (對帳 / 銀行匯款用)</span></div>
+    <div class="card r1"><span class="who">立心</span><span class="want">審核 NGO 代表上傳的收據 → 標記為已匯款</span></div>
+    <div class="card r2"><span class="who">立心</span><span class="want">儀表板：本月匯款狀態 (誰已收/未收)</span></div>
+    <div class="card r2"><span class="who">立心</span><span class="want">收據自動歸檔 (依月份 / 店家 / NGO)</span></div>
+  </div>
+
+  <!-- Col 6: 下月規劃 -->
+  <div class="col">
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want">本月用量自動帶入下月需求參考</span></div>
+    <div class="card r1"><span class="who">NGO 代表</span><span class="want"><b>個案使用紀錄表</b>：「我的個案」這個月使用了哪些券<span class="tag new">新1</span></span></div>
+    <div class="card r1"><span class="who">立心</span><span class="want"><b>全域使用情況</b>：所有店家 / NGO / 個案本月用量總覽</span></div>
+    <div class="card r2"><span class="who">立心</span><span class="want">月度儀表板：店家用量、NGO 比較圖表</span></div>
+    <div class="card r2"><span class="who">立心</span><span class="want">識別「持續被跨店使用」的店家 → 重新分配需求</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ============== RELEASE SUMMARIES ============== -->
+<h2>5. Release 切片 · 每個 Release 走得通整條流程</h2>
+<div class="releases" style="grid-template-columns: repeat(2, 1fr);">
+  <div class="release-card r1">
+    <b>Release 1 — MVP：建立兩次上傳骨架</b>
+    <p><b>R1 重點是做完整的「兩次上傳 + 一次性結算」骨架。</b>第一次上傳（發券前指派）在 R1 就要完整，因為這是補款計算的 source of truth。第二次上傳（月底）R1 先做<b>手動輸入版</b> + 自動比對 + 自動算補款 + 反查個案。相機掃描留到 R2。<br><br><b>結算流程完整：</b>NGO 代表現場給現金 + 拍店家收據 → 系統產生立心月度結算單（下月預付各店家 ＋ 還款給 NGO 代表合併） → 立心一次匯款。</p>
+    <p class="goal">使用者可以做到：完整跑完一個月循環、補款金額不會算錯、能反查每張券給了誰、立心每月只需做一次匯款動作。</p>
+  </div>
+  <div class="release-card r2">
+    <b>Release 2 — 相機掃描 + 體驗優化</b>
+    <p>導入相機掃描（第一次發券前 + 第二次月底回收都可用），把手 key 流水號的時間大幅降低。立心開始能用儀表板看每月趨勢、識別跨店問題店家、收據自動歸檔。</p>
+    <p class="goal">使用者可以做到：跑店時間大幅縮短；立心用資料看每月趨勢；NGO 代表用相機快速掃描券號。</p>
+  </div>
+</div>
+
+<!-- ============== OPEN QUESTIONS ============== -->
+<h2>6. 待釐清問題 ✅ 全部已解決</h2>
+<div class="q-list" style="background:#f1f9f3;border-color:#c8e1d0;">
+<p style="margin:8px 0;font-size:13px;color:#2d7a4a;"><b>所有 open questions 已對齊完成。</b>規劃文件可以直接進入 R1 wireframe 階段。</p>
+<details style="margin-top:8px;">
+<summary style="cursor:pointer;font-size:12px;color:#555;">展開歷次回答的問題</summary>
+<ol style="margin-top:6px;">
+  <li>券單價 → NT$ 100 統一</li>
+  <li>NGO ↔ NGO 代表 → 合併為一個角色</li>
+  <li>補款金流 → NGO 代表現場帶現金</li>
+  <li>代表–店家關係 → 一代表多店</li>
+  <li>未用券 → 自動折抵下月配額（系統不追蹤）</li>
+  <li>個案資料 → 無帳號、無需身分驗證</li>
+  <li>店家入口 → 完全被動，NGO 代表代操</li>
+  <li>流水號 → 立心發放但無編碼邏輯，靠 NGO 第一次上傳對應</li>
+  <li>NGO 代表上傳時機 → 兩次上傳（發券前 + 月底）</li>
+  <li>機構用印處 → 系統不管</li>
+  <li>店家用印處 → 一定會蓋，無容錯需求</li>
+  <li>立心結算單 → 可下載 CSV</li>
+  <li>視角需求 → NGO 看自己個案、立心看全域</li>
+  <li>券月份戳 → 發放時才寫，無跨月剩券問題</li>
+  <li>身分證字號 → 明碼儲存</li>
+  <li>相機識別 → 只讀流水號，店家由 NGO 代表手動選</li>
+  <li>OCR 技術選型 → 手機原生 OCR（不需 AI API），未來必要時再加雲端 fallback</li>
+</ol>
+</details>
+</div>
+
+<p style="margin-top:28px;font-size:13px;color:#1f1f1f;"><b>建議的下一步：</b></p>
+<ol style="font-size:13px;color:#1f1f1f;">
+  <li>R1 wireframe — 4 個重點畫面：
+    <ul>
+      <li>STEP 2 第一次上傳（指派 UI：流水號 → 店家 → 個案）</li>
+      <li>STEP 4 第二次上傳（手 key + 自動結算）</li>
+      <li>STEP 5 立心月度結算單 + CSV 下載</li>
+      <li>STEP 6 雙重儀表板（NGO 個案視角 + 立心全域視角）</li>
+    </ul>
+  </li>
+  <li>R1 資料表設計（個案表、流水號發放對應表、月底回收紀錄表、立心結算單）</li>
+  <li>把規劃整理成可寄給立心的 alignment doc（含 swimlane PNG + 結論清單）</li>
+</ol>
+
+</div>
+</body>
+</html>
