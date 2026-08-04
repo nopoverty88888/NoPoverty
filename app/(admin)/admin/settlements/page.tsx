@@ -87,7 +87,7 @@ export default async function AdminSettlementsPage({
       <div>
         <h2 className="text-xl font-semibold">月度結算單</h2>
         <p className="text-sm text-muted-foreground">
-          依本月他店券回收與下月需求即時計算，無需手動產生。點一列展開各店家明細，或點 NGO 名稱開啟完整結算單。
+          依本月他店券回收與本月需求即時計算，無需手動產生。點一列展開各店家明細，或點 NGO 名稱開啟完整結算單。
         </p>
       </div>
       <MonthNav yearMonth={yearMonth} basePath="/admin/settlements" />
@@ -103,7 +103,7 @@ export default async function AdminSettlementsPage({
               <TableHeader>
                 <TableRow>
                   <TableHead>NGO</TableHead>
-                  <TableHead className="text-right">下月預付</TableHead>
+                  <TableHead className="text-right">本月預付</TableHead>
                   <TableHead className="text-right">補款</TableHead>
                   <TableHead className="text-right">合計</TableHead>
                   <TableHead>收據</TableHead>

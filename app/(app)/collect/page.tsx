@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { currentYearMonth, isYearMonth, nextYearMonth } from "@/lib/schemas/demand";
+import { currentYearMonth, isYearMonth } from "@/lib/schemas/demand";
 import { MonthNav } from "@/components/shared/month-nav";
 import {
   CollectManager,
@@ -36,14 +36,13 @@ export default async function CollectPage({
       ? searchParams.ym
       : currentMonth;
   const readOnly = yearMonth !== currentMonth;
-  const nextMonth = nextYearMonth(yearMonth);
 
   const [
     { data: profile },
     { data: storeRows },
     { data: collectionRows },
     { data: statusRows },
-    { data: nextDemandRows },
+    { data: demandRows },
     { data: receiptRows },
   ] = await Promise.all([
     supabase.from("users").select("role").eq("id", user.id).single(),
@@ -55,17 +54,17 @@ export default async function CollectPage({
       .order("name"),
     supabase
       .from("voucher_collections")
-      .select("serial_number, collected_at_store_id, is_cross_store")
+      .select("serial_number, collected_at_store_id, is_cross_store, quantity")
       .eq("year_month", yearMonth),
     supabase
       .from("store_collection_status")
       .select("store_id, completed_at")
       .eq("year_month", yearMonth),
-    // Next month's demand per store → the prepayment part of the store payout.
+    // This month's demand per store → the prepayment part of the store payout.
     supabase
       .from("monthly_demands")
       .select("store_id, quantity")
-      .eq("year_month", nextMonth),
+      .eq("year_month", yearMonth),
     supabase
       .from("receipts")
       .select("id, store_id, amount, received_date, photo_url")
@@ -83,6 +82,7 @@ export default async function CollectPage({
     serial: c.serial_number,
     collectedStoreId: c.collected_at_store_id,
     isCrossStore: c.is_cross_store ?? false,
+    quantity: c.quantity ?? 1,
   }));
 
   const completedByStore: Record<string, string> = {};
@@ -90,9 +90,9 @@ export default async function CollectPage({
     completedByStore[s.store_id] = s.completed_at;
   }
 
-  const nextDemandByStore: Record<string, number> = {};
-  for (const d of nextDemandRows ?? []) {
-    nextDemandByStore[d.store_id] = d.quantity;
+  const demandByStore: Record<string, number> = {};
+  for (const d of demandRows ?? []) {
+    demandByStore[d.store_id] = d.quantity;
   }
 
   // 上傳收據 — merged into 店家結算 (NGO 代表 only; 立心 doesn't pay itself). Current
@@ -138,11 +138,10 @@ export default async function CollectPage({
         key={yearMonth}
         userId={user.id}
         yearMonth={yearMonth}
-        nextMonth={nextMonth}
         stores={stores}
         initialCollections={initialCollections}
         completedByStore={completedByStore}
-        nextDemandByStore={nextDemandByStore}
+        demandByStore={demandByStore}
         receipts={initialReceipts}
         receiptDefaultDate={showReceipts ? taipeiToday() : null}
         readOnly={readOnly}

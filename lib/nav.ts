@@ -3,6 +3,7 @@ import {
   Users,
   Store,
   ClipboardList,
+  ClipboardCheck,
   Send,
   PackageCheck,
   History,
@@ -29,6 +30,7 @@ export const WORKSPACE_NAV: NavItem[] = [
   { href: "/demands", label: "本月需求", icon: ClipboardList },
   { href: "/distribute", label: "發券給個案", icon: Send },
   { href: "/collect", label: "店家結算", icon: PackageCheck },
+  { href: "/reconcile", label: "未使用核對", icon: ClipboardCheck },
 ];
 
 /**

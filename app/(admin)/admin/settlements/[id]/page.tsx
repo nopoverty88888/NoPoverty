@@ -83,7 +83,7 @@ export default async function SettlementDetailPage({
 
   const csvRows = settlement.stores.map((b) => ({
     店家: b.storeName,
-    下月預付: b.prepay,
+    本月預付: b.prepay,
     補款: b.compensation,
     合計: b.total,
   }));
@@ -105,7 +105,7 @@ export default async function SettlementDetailPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="下月預付" value={formatNT(settlement.prepay)} />
+            <Stat label="本月預付" value={formatNT(settlement.prepay)} />
             <Stat label="補款" value={formatNT(settlement.compensation)} />
             <Stat label="合計" value={formatNT(settlement.total)} emphasis />
             <Stat label="狀態" value={settlementStatusLabel(status)} />
@@ -134,7 +134,7 @@ export default async function SettlementDetailPage({
             <TableHeader>
               <TableRow>
                 <TableHead>店家</TableHead>
-                <TableHead className="text-right">下月預付</TableHead>
+                <TableHead className="text-right">本月預付</TableHead>
                 <TableHead className="text-right">補款</TableHead>
                 <TableHead className="text-right">合計</TableHead>
               </TableRow>

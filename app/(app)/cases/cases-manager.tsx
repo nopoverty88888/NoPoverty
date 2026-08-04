@@ -1,22 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, History } from "lucide-react";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 import {
   caseCreateSchema,
   caseEditSchema,
+  CASE_TYPE_LABELS,
   type CaseCreateInput,
   type CaseEditInput,
 } from "@/lib/schemas/case";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CaseImportDialog } from "./case-import-dialog";
 import {
   Dialog,
@@ -58,6 +68,7 @@ export type CaseRow = {
   name: string;
   note: string | null;
   idLast4: string;
+  caseType: string;
 };
 
 function friendlyError(error: PostgrestError): string {
@@ -88,15 +99,26 @@ export function CasesManager({
 
   const createForm = useForm<CaseCreateInput>({
     resolver: zodResolver(caseCreateSchema),
-    defaultValues: { name: "", id_number: "", note: "" },
+    defaultValues: {
+      name: "",
+      case_type: "individual",
+      id_number: "",
+      note: "",
+    },
   });
   const editForm = useForm<CaseEditInput>({
     resolver: zodResolver(caseEditSchema),
     defaultValues: { name: "", note: "" },
   });
+  const createType = createForm.watch("case_type");
 
   function openCreate() {
-    createForm.reset({ name: "", id_number: "", note: "" });
+    createForm.reset({
+      name: "",
+      case_type: "individual",
+      id_number: "",
+      note: "",
+    });
     setCreateOpen(true);
   }
 
@@ -107,9 +129,13 @@ export function CasesManager({
 
   async function onCreate(values: CaseCreateInput) {
     setSubmitting(true);
+    // 個人個案存身分證字號；活動採購/便當外送無身分，存 null。
+    const isIndividual =
+      values.case_type !== "event" && values.case_type !== "meal_delivery";
     const { error } = await supabase.from("cases").insert({
       name: values.name,
-      id_number: values.id_number,
+      case_type: values.case_type ?? "individual",
+      id_number: isIndividual ? (values.id_number ?? "").trim() : null,
       note: emptyToNull(values.note),
       ngo_id: ngoId,
       created_by_id: userId,
@@ -175,22 +201,44 @@ export function CasesManager({
             <TableHeader>
               <TableRow>
                 <TableHead>姓名</TableHead>
+                <TableHead>類型</TableHead>
                 <TableHead>身分證</TableHead>
                 <TableHead>備註</TableHead>
-                <TableHead className="w-24 text-right">操作</TableHead>
+                <TableHead className="w-32 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {initialCases.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell>
+                    {c.caseType === "individual" ? (
+                      <span className="text-xs text-muted-foreground">個人</span>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        {(CASE_TYPE_LABELS as Record<string, string>)[
+                          c.caseType
+                        ] ?? c.caseType}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
-                    ****{c.idLast4}
+                    {c.caseType === "individual" ? `****${c.idLast4}` : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {c.note ?? "—"}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="使用紀錄"
+                      asChild
+                    >
+                      <Link href={`/cases/${c.id}`}>
+                        <History className="size-4" />
+                      </Link>
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -221,7 +269,8 @@ export function CasesManager({
           <DialogHeader>
             <DialogTitle>新增個案</DialogTitle>
             <DialogDescription>
-              身分證字號僅用於辨識，存檔後不可在系統內再次檢視（僅顯示後 4 碼）。
+              個人個案需填身分證字號（僅用於辨識，存檔後不可再檢視，僅顯示後 4
+              碼）；活動採購 / 便當外送不需身分證字號。
             </DialogDescription>
           </DialogHeader>
           <Form {...createForm}>
@@ -244,12 +293,44 @@ export function CasesManager({
               />
               <FormField
                 control={createForm.control}
+                name="case_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>個案類型</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="individual">個人個案</SelectItem>
+                        <SelectItem value="event">活動採購</SelectItem>
+                        <SelectItem value="meal_delivery">便當外送</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
                 name="id_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>身分證字號</FormLabel>
+                    <FormLabel>
+                      身分證字號
+                      {createType !== "individual" ? "（免填）" : ""}
+                    </FormLabel>
                     <FormControl>
-                      <Input autoComplete="off" {...field} />
+                      <Input
+                        autoComplete="off"
+                        disabled={createType !== "individual"}
+                        placeholder={
+                          createType !== "individual" ? "非個人個案免填" : undefined
+                        }
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -54,7 +54,7 @@ export default async function ReportsSettlementPage({
     { data: paidRows },
   ] = await Promise.all([
     supabase.from("users").select("role").eq("id", user.id).single(),
-    // Live per-NGO settlement (下月預付 + 本月他店補款), RLS-scoped.
+    // Live per-NGO settlement (本月預付 + 本月他店補款), RLS-scoped.
     computeSettlements(supabase, yearMonth),
     // This month's demand per store (the 本月需求 column).
     supabase
@@ -126,7 +126,7 @@ export default async function ReportsSettlementPage({
   const csvRows = rows.map((r) => ({
     [labelHeader]: r.label,
     本月需求: r.demand,
-    下月預付: r.prepay,
+    本月預付: r.prepay,
     本月補款: r.comp,
     應付合計: r.total,
     狀態: r.paid ? "已付款" : "未付款",
@@ -139,8 +139,8 @@ export default async function ReportsSettlementPage({
           <h2 className="text-xl font-semibold">月度結算</h2>
           <p className="text-sm text-muted-foreground">
             {isLixin
-              ? "各 NGO 本月需求與應付款（下月預付 + 本月他店補款）"
-              : "各店家本月需求與應付款（下月預付 + 本月他店補款）"}
+              ? "各 NGO 本月需求與應付款（本月預付 + 本月他店補款）"
+              : "各店家本月需求與應付款（本月預付 + 本月他店補款）"}
           </p>
         </div>
         {rows.length > 0 ? (
@@ -157,7 +157,7 @@ export default async function ReportsSettlementPage({
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="本月需求" value={`${totals.demand} 張`} />
-            <Stat label="下月預付款" value={formatNT(totals.prepay)} />
+            <Stat label="本月預付款" value={formatNT(totals.prepay)} />
             <Stat label="本月補款" value={formatNT(totals.comp)} />
             <Stat label="應付總額" value={formatNT(totals.total)} emphasis />
           </div>
@@ -174,7 +174,7 @@ export default async function ReportsSettlementPage({
                   <TableRow>
                     <TableHead>{labelHeader}</TableHead>
                     <TableHead className="text-right">本月需求</TableHead>
-                    <TableHead className="text-right">下月預付</TableHead>
+                    <TableHead className="text-right">本月預付</TableHead>
                     <TableHead className="text-right">本月補款</TableHead>
                     <TableHead className="text-right">應付合計</TableHead>
                     <TableHead>狀態</TableHead>

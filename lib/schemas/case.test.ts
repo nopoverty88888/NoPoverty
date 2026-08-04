@@ -47,6 +47,38 @@ describe("caseCreateSchema", () => {
         .success,
     ).toBe(false);
   });
+
+  it("accepts an explicit individual case_type", () => {
+    const result = caseCreateSchema.safeParse({
+      name: "王小明",
+      case_type: "individual",
+      id_number: "A123456789",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows an event case with no id_number", () => {
+    const result = caseCreateSchema.safeParse({
+      name: "端午活動採購",
+      case_type: "event",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows a meal_delivery case with no id_number", () => {
+    const result = caseCreateSchema.safeParse({
+      name: "便當外送",
+      case_type: "meal_delivery",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("still requires id_number for an individual case", () => {
+    expect(
+      caseCreateSchema.safeParse({ name: "王小明", case_type: "individual" })
+        .success,
+    ).toBe(false);
+  });
 });
 
 describe("caseEditSchema", () => {

@@ -41,31 +41,34 @@ export type Database = {
     Tables: {
       cases: {
         Row: {
+          case_type: string
           created_at: string
           created_by_id: string | null
           deleted_at: string | null
           id: string
-          id_number: string
+          id_number: string | null
           name: string
           ngo_id: string
           note: string | null
         }
         Insert: {
+          case_type?: string
           created_at?: string
           created_by_id?: string | null
           deleted_at?: string | null
           id?: string
-          id_number: string
+          id_number?: string | null
           name: string
           ngo_id: string
           note?: string | null
         }
         Update: {
+          case_type?: string
           created_at?: string
           created_by_id?: string | null
           deleted_at?: string | null
           id?: string
-          id_number?: string
+          id_number?: string | null
           name?: string
           ngo_id?: string
           note?: string | null
@@ -83,6 +86,64 @@ export type Database = {
             columns: ["ngo_id"]
             isOneToOne: false
             referencedRelation: "ngos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_case_confirmations: {
+        Row: {
+          assigned_count: number
+          case_id: string
+          collected_count: number
+          confirmed_at: string
+          confirmed_by_id: string | null
+          id: string
+          ngo_id: string
+          unused_count: number
+          year_month: string
+        }
+        Insert: {
+          assigned_count?: number
+          case_id: string
+          collected_count?: number
+          confirmed_at?: string
+          confirmed_by_id?: string | null
+          id?: string
+          ngo_id: string
+          unused_count?: number
+          year_month: string
+        }
+        Update: {
+          assigned_count?: number
+          case_id?: string
+          collected_count?: number
+          confirmed_at?: string
+          confirmed_by_id?: string | null
+          id?: string
+          ngo_id?: string
+          unused_count?: number
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_case_confirmations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_case_confirmations_ngo_id_fkey"
+            columns: ["ngo_id"]
+            isOneToOne: false
+            referencedRelation: "ngos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_case_confirmations_confirmed_by_id_fkey"
+            columns: ["confirmed_by_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -622,6 +683,7 @@ export type Database = {
           is_cross_store: boolean | null
           originally_assigned_case_id: string | null
           originally_assigned_store_id: string | null
+          quantity: number
           scanned_at: string
           scanned_by_id: string | null
           serial_number: string
@@ -633,6 +695,7 @@ export type Database = {
           is_cross_store?: boolean | null
           originally_assigned_case_id?: string | null
           originally_assigned_store_id?: string | null
+          quantity?: number
           scanned_at?: string
           scanned_by_id?: string | null
           serial_number: string
@@ -644,6 +707,7 @@ export type Database = {
           is_cross_store?: boolean | null
           originally_assigned_case_id?: string | null
           originally_assigned_store_id?: string | null
+          quantity?: number
           scanned_at?: string
           scanned_by_id?: string | null
           serial_number?: string
@@ -715,6 +779,7 @@ export type Database = {
           case_id: string | null
           case_name: string | null
           ngo_id: string | null
+          quantity: number | null
           scanned_at: string | null
           serial_number: string | null
           used_at_store_name: string | null
@@ -730,8 +795,30 @@ export type Database = {
           },
         ]
       }
+      case_monthly_reconciliation_view: {
+        Row: {
+          assigned_count: number | null
+          case_id: string | null
+          case_name: string | null
+          case_type: string | null
+          collected_count: number | null
+          ngo_id: string | null
+          unused_count: number | null
+          year_month: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_ngo_id_fkey"
+            columns: ["ngo_id"]
+            isOneToOne: false
+            referencedRelation: "ngos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       my_cases: {
         Row: {
+          case_type: string | null
           created_at: string | null
           created_by_id: string | null
           id: string | null
@@ -741,6 +828,7 @@ export type Database = {
           note: string | null
         }
         Insert: {
+          case_type?: string | null
           created_at?: string | null
           created_by_id?: string | null
           id?: string | null
@@ -750,6 +838,7 @@ export type Database = {
           note?: string | null
         }
         Update: {
+          case_type?: string | null
           created_at?: string | null
           created_by_id?: string | null
           id?: string | null

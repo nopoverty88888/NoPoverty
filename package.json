@@ -9,6 +9,7 @@
     "lint": "next lint",
     "seed:admin": "tsx scripts/seed-admin.ts",
     "reset:admin": "tsx scripts/seed-admin.ts --reset",
+    "rename:admin": "tsx scripts/rename-admin.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "gen:icons": "node scripts/generate-icons.mjs",
     "test": "vitest run",

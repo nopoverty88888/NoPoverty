@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/types";
-import { nextYearMonth } from "@/lib/schemas/demand";
 
 const VOUCHER_PRICE = 100; // NT$ per voucher
 
@@ -25,7 +24,9 @@ export type RepSettlement = {
 /**
  * Live per-NGO settlement for a month, computed from source data on every read —
  * there is no snapshot / "generate" step. Per store:
- *   下月預付款 = 下個月(M+1)需求 × 100，本月他店補款 = 本月他店券 × 100。
+ *   當月預付款 = 本月(M)需求 × 100，本月他店補款 = 本月他店券 × 100。
+ * (Prepay is for the CURRENT month — demand is submitted at the start of the
+ * month and paid the same month; see the 2026-07-03 立心 meeting.)
  * RLS scopes the inputs automatically: 立心 sees all NGOs, an NGO 代表 sees only
  * their own stores/collections, so the same helper serves W5, W6, M11 and reports.
  */
@@ -33,7 +34,6 @@ export async function computeSettlements(
   supabase: SupabaseClient<Database>,
   yearMonth: string,
 ): Promise<RepSettlement[]> {
-  const nextMonth = nextYearMonth(yearMonth);
   const [
     { data: stores },
     { data: demands },
@@ -45,7 +45,7 @@ export async function computeSettlements(
     supabase
       .from("monthly_demands")
       .select("store_id, quantity")
-      .eq("year_month", nextMonth),
+      .eq("year_month", yearMonth),
     supabase
       .from("voucher_collections")
       .select("collected_at_store_id")

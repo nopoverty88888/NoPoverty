@@ -30,7 +30,7 @@ if (typeof globalThis.WebSocket === "undefined") {
 
 const LIXIN_NGO_ID = "00000000-0000-0000-0000-000000000001";
 const LIXIN_NGO_NAME = "立心基金會";
-const ADMIN_EMAIL = "katherine84522@gmail.com";
+const ADMIN_EMAIL = "nopoverty88888@gmail.com";
 const ADMIN_NAME = "立心管理員";
 
 // Options: `--reset` resets an existing user's password; ADMIN_PASSWORD lets

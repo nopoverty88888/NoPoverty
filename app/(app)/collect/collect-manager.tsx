@@ -6,7 +6,10 @@ import { Trash2, Plus } from "lucide-react";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
-import { serialNumberSchema } from "@/lib/schemas/voucher";
+import {
+  serialNumberSchema,
+  collectionQuantitySchema,
+} from "@/lib/schemas/voucher";
 import { SerialScanner } from "@/components/shared/serial-scanner";
 import { ReceiptsManager, type ReceiptRow } from "./receipts-manager";
 import { Button } from "@/components/ui/button";
@@ -39,32 +42,35 @@ export type Collection = {
   serial: string;
   collectedStoreId: string;
   isCrossStore: boolean;
+  quantity: number;
 };
 
 const VOUCHER_PRICE = 100; // NT$ per voucher — the unit for both prepay & compensation
 
-/** One row the rep is entering: a serial + whether they marked it 他店券. */
-type Draft = { key: string; serial: string; cross: boolean };
+/**
+ * One row the rep is entering: a serial, whether they marked it 他店券, and 張數
+ * (how many NT$100 units this one paper voucher stands for — 1 normally, > 1 for
+ * an NGO's own bulk-use voucher with a handwritten count).
+ */
+type Draft = { key: string; serial: string; cross: boolean; qty: number };
 
 export function CollectManager({
   userId,
   yearMonth,
-  nextMonth,
   stores,
   initialCollections,
   completedByStore,
-  nextDemandByStore,
+  demandByStore,
   receipts,
   receiptDefaultDate,
   readOnly = false,
 }: {
   userId: string;
   yearMonth: string;
-  nextMonth: string;
   stores: StoreOption[];
   initialCollections: Collection[];
   completedByStore: Record<string, string>;
-  nextDemandByStore: Record<string, number>;
+  demandByStore: Record<string, number>;
   receipts: ReceiptRow[];
   receiptDefaultDate: string | null;
   readOnly?: boolean;
@@ -73,7 +79,7 @@ export function CollectManager({
 
   const [storeId, setStoreId] = useState(stores.length === 1 ? stores[0].id : "");
   const [drafts, setDrafts] = useState<Draft[]>([
-    { key: "row-0", serial: "", cross: false },
+    { key: "row-0", serial: "", cross: false, qty: 1 },
   ]);
   const draftsRef = useRef<Draft[]>(drafts);
   const keySeq = useRef(0);
@@ -97,10 +103,14 @@ export function CollectManager({
   const crossCount = rows.filter((c) => c.isCrossStore).length;
   const ownCount = rows.length - crossCount;
   const filledCount = drafts.filter((d) => d.serial.trim()).length;
+  // Σ張數 across saved rows — differs from 筆數 only when a voucher carries a
+  // handwritten multiplier (NGO bulk use). Shown for visibility; does NOT feed
+  // the payout (compensation stays 他店券筆數 × 100 — 他店券 is always 張數 = 1).
+  const totalQty = rows.reduce((a, c) => a + c.quantity, 0);
 
-  // 應付店家 = 下月預付款（下月需求×100）+ 本月他店補款（他店券×100）.
-  const nextQty = nextDemandByStore[storeId] ?? 0;
-  const prepay = nextQty * VOUCHER_PRICE;
+  // 應付店家 = 本月預付款（本月需求×100）+ 本月他店補款（他店券×100）.
+  const demandQty = demandByStore[storeId] ?? 0;
+  const prepay = demandQty * VOUCHER_PRICE;
   const compensation = crossCount * VOUCHER_PRICE;
   const storePayout = prepay + compensation;
 
@@ -138,8 +148,8 @@ export function CollectManager({
     keySeq.current += 1;
     return `row-${keySeq.current}`;
   }
-  function addDraft(serial = "", cross = false) {
-    commitDrafts([...draftsRef.current, { key: newKey(), serial, cross }]);
+  function addDraft(serial = "", cross = false, qty = 1) {
+    commitDrafts([...draftsRef.current, { key: newKey(), serial, cross, qty }]);
   }
   function updateDraft(key: string, patch: Partial<Draft>) {
     commitDrafts(
@@ -148,7 +158,9 @@ export function CollectManager({
   }
   function removeDraft(key: string) {
     const next = draftsRef.current.filter((d) => d.key !== key);
-    commitDrafts(next.length ? next : [{ key: newKey(), serial: "", cross: false }]);
+    commitDrafts(
+      next.length ? next : [{ key: newKey(), serial: "", cross: false, qty: 1 }],
+    );
   }
 
   // A scanned serial becomes a new row (default 本店券; the rep can flip it).
@@ -184,7 +196,7 @@ export function CollectManager({
     const invalid: string[] = [];
     const already: string[] = [];
     const dupes: string[] = [];
-    const eligible: { serial: string; cross: boolean }[] = [];
+    const eligible: { serial: string; cross: boolean; qty: number }[] = [];
     for (const d of draftsRef.current) {
       const s = d.serial.trim();
       if (!s) continue;
@@ -193,7 +205,9 @@ export function CollectManager({
       else if (seen.has(s)) dupes.push(s);
       else {
         seen.add(s);
-        eligible.push({ serial: s, cross: d.cross });
+        // qty is clamped in the input; re-validate and fall back to 1 defensively.
+        const q = collectionQuantitySchema.safeParse(d.qty);
+        eligible.push({ serial: s, cross: d.cross, qty: q.success ? q.data : 1 });
       }
     }
     if (eligible.length === 0 && invalid.length === 0) {
@@ -202,17 +216,22 @@ export function CollectManager({
       return;
     }
 
-    type Row = { serial_number: string; is_cross_store: boolean | null };
+    type Row = {
+      serial_number: string;
+      is_cross_store: boolean | null;
+      quantity: number;
+    };
     const insertedRows: Row[] = [];
     const failed: string[] = [];
-    const newRow = (e: { serial: string; cross: boolean }) => ({
+    const newRow = (e: { serial: string; cross: boolean; qty: number }) => ({
       serial_number: e.serial,
       collected_at_store_id: storeId,
       year_month: yearMonth,
       scanned_by_id: userId,
       is_cross_store: e.cross, // the rep's declaration; trigger respects it
+      quantity: e.qty,
     });
-    const cols = "serial_number, is_cross_store";
+    const cols = "serial_number, is_cross_store, quantity";
 
     if (eligible.length > 0) {
       const { data, error } = await supabase
@@ -242,12 +261,14 @@ export function CollectManager({
           serial: r.serial_number,
           collectedStoreId: storeId,
           isCrossStore: r.is_cross_store ?? false,
+          quantity: r.quantity ?? 1,
         })),
       ]);
     }
 
     const own = insertedRows.filter((r) => !r.is_cross_store).length;
     const cross = insertedRows.filter((r) => r.is_cross_store).length;
+    const insertedQty = insertedRows.reduce((a, r) => a + (r.quantity ?? 1), 0);
 
     // Keep only rows still needing attention (bad format / failed); drop recorded.
     const recordedAfter = new Set([
@@ -258,9 +279,12 @@ export function CollectManager({
       const s = d.serial.trim();
       return s && !recordedAfter.has(s);
     });
-    commitDrafts(keep.length ? keep : [{ key: newKey(), serial: "", cross: false }]);
+    commitDrafts(
+      keep.length ? keep : [{ key: newKey(), serial: "", cross: false, qty: 1 }],
+    );
 
-    const parts = [`已記錄 ${insertedRows.length} 張`];
+    const parts = [`已記錄 ${insertedRows.length} 筆`];
+    if (insertedQty !== insertedRows.length) parts.push(`（共 ${insertedQty} 張）`);
     if (insertedRows.length > 0) parts.push(`（本店 ${own}／他店 ${cross}）`);
     const skips: string[] = [];
     if (dupes.length) skips.push(`重複 ${dupes.length}`);
@@ -363,13 +387,16 @@ export function CollectManager({
               <CardHeader>
                 <CardTitle className="text-base">回收登錄</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  他店的券請改選「他店券」（才計補款）。
+                  他店的券請改選「他店券」（才計補款）。同一張券若手寫多張券的金額（如活動採購／便當外送），把「張數」改成該數字。
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   {drafts.map((d) => (
-                    <div key={d.key} className="flex items-center gap-2">
+                    <div
+                      key={d.key}
+                      className="flex flex-wrap items-center gap-2"
+                    >
                       <Input
                         value={d.serial}
                         onChange={(e) =>
@@ -381,6 +408,24 @@ export function CollectManager({
                         placeholder="流水號"
                         aria-label="流水號"
                         className="w-36"
+                      />
+                      <Input
+                        type="number"
+                        min={1}
+                        max={999}
+                        value={d.qty}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value, 10);
+                          updateDraft(d.key, {
+                            qty: Number.isNaN(n)
+                              ? 1
+                              : Math.min(999, Math.max(1, n)),
+                          });
+                        }}
+                        disabled={batchBusy}
+                        aria-label="張數"
+                        title="張數（這張紙代表幾張券；預設 1）"
+                        className="w-16"
                       />
                       <Select
                         value={d.cross ? "cross" : "own"}
@@ -397,6 +442,11 @@ export function CollectManager({
                           <SelectItem value="cross">他店券</SelectItem>
                         </SelectContent>
                       </Select>
+                      {d.qty > 1 ? (
+                        <span className="whitespace-nowrap text-xs text-muted-foreground">
+                          = NT$ {(d.qty * VOUCHER_PRICE).toLocaleString()}
+                        </span>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -428,7 +478,7 @@ export function CollectManager({
                     onClick={runBatch}
                     disabled={batchBusy || filledCount === 0}
                   >
-                    {batchBusy ? "記錄中…" : `加入 ${filledCount} 張`}
+                    {batchBusy ? "記錄中…" : `加入 ${filledCount} 筆`}
                   </Button>
                 </div>
 
@@ -452,19 +502,19 @@ export function CollectManager({
             </Card>
           ) : null}
 
-          {/* 應付店家 = 下月預付 + 他店補款；含付款動作 */}
+          {/* 應付店家 = 本月預付 + 他店補款；含付款動作 */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">應付店家</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <PayRow
-                label={`下月預付（${nextMonth}·${nextQty} 張）`}
+                label={`本月預付（${yearMonth}·${demandQty} 張）`}
                 value={prepay}
               />
-              {nextQty === 0 ? (
+              {demandQty === 0 ? (
                 <p className="text-xs text-amber-700">
-                  尚未填寫 {nextMonth} 需求，預付以 0 計。
+                  尚未填寫 {yearMonth} 需求，預付以 0 計。
                 </p>
               ) : null}
               <PayRow label={`他店補款（${crossCount} 張）`} value={compensation} />
@@ -514,7 +564,9 @@ export function CollectManager({
             <CardHeader>
               <CardTitle className="text-base">回收明細</CardTitle>
               <p className="text-xs text-muted-foreground">
-                共 {rows.length} 張　·　本店 {ownCount}　·　他店 {crossCount}
+                共 {rows.length} 筆
+                {totalQty !== rows.length ? `（${totalQty} 張）` : ""}　·　本店{" "}
+                {ownCount}　·　他店 {crossCount}
               </p>
             </CardHeader>
             <CardContent>
@@ -528,6 +580,7 @@ export function CollectManager({
                     <TableHeader>
                       <TableRow>
                         <TableHead>流水號</TableHead>
+                        <TableHead>張數</TableHead>
                         <TableHead>類型</TableHead>
                         {!readOnly ? (
                           <TableHead className="w-16 text-right">操作</TableHead>
@@ -538,6 +591,18 @@ export function CollectManager({
                       {[...rows].reverse().map((c) => (
                         <TableRow key={c.serial}>
                           <TableCell className="font-medium">{c.serial}</TableCell>
+                          <TableCell>
+                            {c.quantity > 1 ? (
+                              <span className="font-medium">
+                                {c.quantity}{" "}
+                                <span className="text-xs text-muted-foreground">
+                                  = NT$ {(c.quantity * VOUCHER_PRICE).toLocaleString()}
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">1</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {c.isCrossStore ? (
                               <Badge variant="destructive">他店券</Badge>

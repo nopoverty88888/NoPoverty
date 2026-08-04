@@ -67,6 +67,10 @@ function extractSerial(text: string): string | null {
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -108,6 +112,9 @@ export function SerialScanner({
   const [history, setHistory] = useState<{ serial: string; result: ScanResult }[]>(
     [],
   );
+  const [scanning, setScanning] = useState(false);
+  const [scanCount, setScanCount] = useState(0);
+  const [flash, setFlash] = useState<{ serial: string; ok: boolean } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -116,11 +123,21 @@ export function SerialScanner({
   // Set when the dialog closes so an in-flight multi-image loop stops (instead of
   // OCR-ing on, staging serials after close, and recreating the terminated worker).
   const cancelledRef = useRef(false);
+  const scanningRef = useRef(false); // continuous-scan loop control
+  const addedRef = useRef(0); // successful adds in the current continuous run
+  const seenRef = useRef<Set<string>>(new Set()); // serials handled this session (dedup)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     cancelledRef.current = false;
+    scanningRef.current = false;
+    seenRef.current = new Set();
+    addedRef.current = 0;
+    setScanCount(0);
+    setFlash(null);
 
     async function start() {
       setCameraError(null);
@@ -155,10 +172,14 @@ export function SerialScanner({
     return () => {
       cancelled = true;
       cancelledRef.current = true;
+      scanningRef.current = false;
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       void workerRef.current?.terminate();
       workerRef.current = null;
+      void audioRef.current?.close();
+      audioRef.current = null;
     };
   }, [open]);
 
@@ -269,6 +290,119 @@ export function SerialScanner({
     }
   }
 
+  // Lazily create/resume an AudioContext. Must run inside a user gesture (the
+  // "開始連續掃描" tap) so mobile autoplay policy allows the beep.
+  function ensureAudio() {
+    try {
+      if (!audioRef.current) {
+        const AC =
+          window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext;
+        if (AC) audioRef.current = new AC();
+      }
+      void audioRef.current?.resume();
+    } catch {
+      // audio is a nice-to-have; ignore failures
+    }
+  }
+
+  // Short synthesized beep — high for success, low for a rejected serial. No
+  // audio asset needed, so it works offline once the PWA is cached.
+  function playBeep(ok: boolean) {
+    const ctx = audioRef.current;
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = ok ? 880 : 320;
+      const t = ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.2, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    } catch {
+      // ignore audio failures
+    }
+  }
+
+  // Beep + vibrate + on-screen flash for one scan result.
+  function cue(ok: boolean, serial: string) {
+    playBeep(ok);
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(ok ? 60 : [40, 40, 40]);
+    }
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    setFlash({ serial, ok });
+    flashTimerRef.current = setTimeout(() => setFlash(null), 1100);
+  }
+
+  // Continuously OCR the live camera; each newly recognized serial is auto-added
+  // (with a beep + on-screen flash) so a stack of vouchers can be scanned one
+  // after another without tapping between each. Serials are deduped for the
+  // session so a voucher held in frame isn't added repeatedly.
+  async function runContinuousLoop() {
+    while (scanningRef.current && !cancelledRef.current) {
+      const video = videoRef.current;
+      if (!video || !video.videoWidth) {
+        await sleep(300);
+        continue;
+      }
+      let serial: string | null = null;
+      try {
+        serial = await ocrSourceSerial(
+          video,
+          video.videoWidth,
+          video.videoHeight,
+        );
+      } catch {
+        serial = null;
+      }
+      if (!scanningRef.current || cancelledRef.current) break;
+      if (serial && !seenRef.current.has(serial)) {
+        seenRef.current.add(serial); // mark before await so it can't double-fire
+        const result = await onDetect(serial);
+        if (!scanningRef.current || cancelledRef.current) break;
+        if (result.ok) {
+          addedRef.current += 1;
+          setScanCount(addedRef.current);
+          setStatus(`連續掃描中…已加入 ${addedRef.current} 張。`);
+        } else {
+          setStatus(`連續掃描中…${serial}：${result.message}`);
+        }
+        setHistory((prev) => [{ serial, result }, ...prev].slice(0, 16));
+        cue(result.ok, serial);
+        await sleep(1000); // pause so the user can move to the next voucher
+      } else {
+        await sleep(350);
+      }
+    }
+  }
+
+  function startContinuous() {
+    if (scanningRef.current) return;
+    ensureAudio();
+    addedRef.current = 0;
+    setScanCount(0);
+    setStatus("連續掃描中…對準紅色 NO. 號碼，辨識成功會自動加入。");
+    scanningRef.current = true;
+    setScanning(true);
+    void runContinuousLoop().finally(() => {
+      scanningRef.current = false;
+      setScanning(false);
+    });
+  }
+
+  function stopContinuous() {
+    scanningRef.current = false;
+    setScanning(false);
+    setStatus(`已停止連續掃描，本次加入 ${addedRef.current} 張。`);
+  }
+
   async function addRecognized() {
     const parsed = serialNumberSchema.safeParse(recognized);
     if (!parsed.success) {
@@ -298,8 +432,8 @@ export function SerialScanner({
         <DialogHeader>
           <DialogTitle>掃描流水號</DialogTitle>
           <DialogDescription>
-            用相機逐張辨識（紅色 NO. 號碼清楚可見），或「選擇多張相片」一次辨識多張。
-            辨識結果會加入待記錄清單，可再修正。
+            「開始連續掃描」對準每張券的紅色 NO. 號碼，辨識成功會有聲音提示並自動加入；
+            也可「辨識單張」確認後加入，或「選擇多張相片」批次辨識。結果都會進入待記錄清單，可再修正。
           </DialogDescription>
         </DialogHeader>
 
@@ -316,40 +450,72 @@ export function SerialScanner({
               muted
               className="aspect-video w-full object-cover"
             />
-            <div className="pointer-events-none absolute inset-4 rounded border-2 border-primary/70" />
+            <div
+              className={`pointer-events-none absolute inset-4 rounded border-2 ${
+                scanning ? "border-emerald-400/80" : "border-primary/70"
+              }`}
+            />
+            {flash ? (
+              <div
+                className={`pointer-events-none absolute inset-0 flex items-center justify-center ${
+                  flash.ok ? "bg-emerald-500/25" : "bg-destructive/25"
+                }`}
+              >
+                <div
+                  className={`rounded-lg px-4 py-2 text-2xl font-bold tracking-widest text-white shadow-lg ${
+                    flash.ok ? "bg-emerald-600" : "bg-destructive"
+                  }`}
+                >
+                  {flash.ok ? "✓" : "✗"} {flash.serial}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
           <Button
             type="button"
-            onClick={captureFromCamera}
-            disabled={ocrBusy || Boolean(cameraError)}
-            className="flex-1"
+            onClick={scanning ? stopContinuous : startContinuous}
+            disabled={Boolean(cameraError)}
+            variant={scanning ? "destructive" : "default"}
+            className="w-full"
           >
             <ScanLine className="mr-2 size-4" />
-            {ocrBusy ? "辨識中…" : "辨識"}
+            {scanning ? `停止連續掃描（已加入 ${scanCount}）` : "開始連續掃描"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileRef.current?.click()}
-            disabled={ocrBusy}
-          >
-            <ImageUp className="mr-2 size-4" /> 選擇多張相片
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? []);
-              if (files.length) void recognizeFiles(files);
-              e.target.value = "";
-            }}
-          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={captureFromCamera}
+              disabled={ocrBusy || scanning || Boolean(cameraError)}
+              className="flex-1"
+            >
+              <Camera className="mr-2 size-4" />
+              {ocrBusy ? "辨識中…" : "辨識單張"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileRef.current?.click()}
+              disabled={ocrBusy || scanning}
+            >
+              <ImageUp className="mr-2 size-4" /> 選擇多張相片
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length) void recognizeFiles(files);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
