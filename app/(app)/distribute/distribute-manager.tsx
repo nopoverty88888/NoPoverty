@@ -69,6 +69,15 @@ export type Assignment = {
 
 const MAX_SERIAL = 99999;
 
+/**
+ * 發券方式 — which entity is picked first. Per the 2026-07-03 立心 meeting the
+ * preferred flow is 先選個案 (case-first), but store-first is kept because a rep
+ * holding one store's serial booklet finds it faster to assign a run of serials
+ * to many cases. Default = case-first; the toggle switches the primary selector,
+ * the allocation form's secondary field, and the ledger grouping.
+ */
+type Mode = "case" | "store";
+
 export function DistributeManager({
   userId,
   yearMonth,
@@ -86,22 +95,31 @@ export function DistributeManager({
 }) {
   const supabase = createClient();
 
+  const singleStore = stores.length === 1 ? stores[0].id : "";
+
+  const [mode, setMode] = useState<Mode>("case");
   const [assignments, setAssignments] =
     useState<Assignment[]>(initialAssignments);
-  const [storeId, setStoreId] = useState(stores.length === 1 ? stores[0].id : "");
+  const [storeId, setStoreId] = useState(singleStore);
   const [caseId, setCaseId] = useState("");
   const [caseOpen, setCaseOpen] = useState(false);
   const [startInput, setStartInput] = useState("");
   const [countInput, setCountInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [removing, setRemoving] = useState<{ caseId: string; name: string } | null>(
-    null,
-  );
+  const [removing, setRemoving] = useState<{
+    storeId: string;
+    caseId: string;
+    name: string;
+  } | null>(null);
 
   const caseName = useMemo(
     () => new Map(cases.map((c) => [c.id, c.name])),
     [cases],
+  );
+  const storeName = useMemo(
+    () => new Map(stores.map((s) => [s.id, s.name])),
+    [stores],
   );
 
   // All serials used this month (any store) — global uniqueness guard.
@@ -121,41 +139,73 @@ export function DistributeManager({
     return pad5(Math.max(...serials) + 1);
   }
 
-  function onStoreChange(value: string) {
-    setStoreId(value);
-    setStartInput(nextStartFor(value));
+  function changeMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
     setCaseId("");
+    setStoreId(singleStore);
+    setStartInput(singleStore ? nextStartFor(singleStore) : "");
+    setCountInput("");
     setError(null);
   }
 
-  // Rows for the selected store, grouped by case.
-  const storeRows = useMemo(() => {
-    const byCase = new Map<string, { serials: number[]; dates: string[] }>();
+  // Picking a store: always re-point the serial auto-advance at that store.
+  // resetCase clears the case only when the store is the PRIMARY selector
+  // (store-first mode) — in case-first the store is secondary, so the case stays.
+  function selectStore(value: string, resetCase: boolean) {
+    setStoreId(value);
+    setStartInput(nextStartFor(value));
+    if (resetCase) setCaseId("");
+    setError(null);
+  }
+
+  function selectCase(value: string) {
+    setCaseId(value);
+    setCaseOpen(false);
+    setError(null);
+  }
+
+  // The primary (gate) selection — the ledger + allocation form appear once set.
+  const primaryChosen = mode === "case" ? !!caseId : !!storeId;
+
+  // Ledger for the chosen primary, grouped by the OTHER entity.
+  //   case-first → the selected case's vouchers grouped by store.
+  //   store-first → the selected store's vouchers grouped by case.
+  const ledgerRows = useMemo(() => {
+    if (!primaryChosen) return [];
+    const byKey = new Map<string, { serials: number[]; dates: string[] }>();
     for (const a of assignments) {
-      if (a.storeId !== storeId) continue;
-      const entry = byCase.get(a.caseId) ?? { serials: [], dates: [] };
+      const matches = mode === "case" ? a.caseId === caseId : a.storeId === storeId;
+      if (!matches) continue;
+      const key = mode === "case" ? a.storeId : a.caseId;
+      const entry = byKey.get(key) ?? { serials: [], dates: [] };
       entry.serials.push(Number(a.serial));
       entry.dates.push(a.assignedAt);
-      byCase.set(a.caseId, entry);
+      byKey.set(key, entry);
     }
-    return Array.from(byCase.entries())
-      .map(([cid, { serials, dates }]) => ({
-        caseId: cid,
-        name: caseName.get(cid) ?? "（已刪除個案）",
+    return Array.from(byKey.entries())
+      .map(([key, { serials, dates }]) => ({
+        key,
+        name:
+          mode === "case"
+            ? storeName.get(key) ?? "（已刪除店家）"
+            : caseName.get(key) ?? "（已刪除個案）",
+        storeId: mode === "case" ? key : storeId,
+        caseId: mode === "case" ? caseId : key,
         serials,
         count: serials.length,
         min: Math.min(...serials),
         dateLabel: dateRangeLabel(dates),
       }))
       .sort((a, b) => a.min - b.min);
-  }, [assignments, storeId, caseName]);
+  }, [assignments, mode, caseId, storeId, primaryChosen, caseName, storeName]);
 
-  const storeTotal = storeRows.reduce((sum, r) => sum + r.count, 0);
+  const ledgerTotal = ledgerRows.reduce((sum, r) => sum + r.count, 0);
 
   async function addAllocation() {
     setError(null);
     if (!storeId || !caseId) {
-      setError("請先選擇店家與個案");
+      setError("請先選擇個案與店家");
       return;
     }
     const startParsed = serialNumberSchema.safeParse(startInput);
@@ -211,13 +261,15 @@ export function DistributeManager({
       caseId,
       assignedAt: nowIso,
     }));
-    const updated = [...assignments, ...added];
-    setAssignments(updated);
+    setAssignments((prev) => [...prev, ...added]);
     toast.success(`已記錄 ${count} 張給 ${caseName.get(caseId) ?? "個案"}`);
-    // advance to the next serial; ready for the next case
+    // advance to the next serial (same store booklet), ready for the next entry
     setStartInput(pad5(endNum + 1));
     setCountInput("");
-    setCaseId("");
+    // store-first: clear the case so the next serial run goes to the next person.
+    // case-first: keep the case (the ledger stays on that person) — the rep picks
+    // a new store or a new person manually.
+    if (mode === "store") setCaseId("");
     setError(null);
   }
 
@@ -235,7 +287,7 @@ export function DistributeManager({
       .from("voucher_assignments")
       .delete()
       .eq("year_month", yearMonth)
-      .eq("store_id", storeId)
+      .eq("store_id", target.storeId)
       .eq("case_id", target.caseId);
     if (delError) {
       toast.error((delError as PostgrestError).message);
@@ -243,11 +295,11 @@ export function DistributeManager({
     }
     setAssignments((prev) =>
       prev.filter(
-        (a) => !(a.storeId === storeId && a.caseId === target.caseId),
+        (a) => !(a.storeId === target.storeId && a.caseId === target.caseId),
       ),
     );
     setRemoving(null);
-    setStartInput(nextStartFor(storeId));
+    setStartInput(storeId ? nextStartFor(storeId) : "");
     toast.success(`已移除 ${target.name} 的紀錄`);
   }
 
@@ -263,29 +315,105 @@ export function DistributeManager({
 
   const selectedCase = cases.find((c) => c.id === caseId);
 
+  // The 個案 searchable combobox — rendered as the primary (case-first) or as the
+  // allocation form's secondary field (store-first). Only one is on screen at a
+  // time, so a single `caseOpen` state is shared.
+  const caseCombobox = (
+    <Popover open={caseOpen} onOpenChange={setCaseOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={caseOpen}
+          className="w-full justify-between font-normal sm:max-w-sm"
+        >
+          {selectedCase ? selectedCase.name : "選擇個案"}
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput placeholder="搜尋個案姓名…" />
+          <CommandList>
+            <CommandEmpty>查無個案</CommandEmpty>
+            <CommandGroup>
+              {cases.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={c.name}
+                  onSelect={() => selectCase(c.id)}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 size-4",
+                      caseId === c.id ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  {c.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+
   return (
     <div className="space-y-4">
+      {/* Mode toggle + primary selector */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">選擇店家</CardTitle>
+        <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base">
+            {mode === "case" ? "選擇個案" : "選擇店家"}
+          </CardTitle>
+          <div className="inline-flex self-start rounded-md border p-0.5 text-sm sm:self-auto">
+            {(
+              [
+                ["case", "先選個案"],
+                ["store", "先選店家"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => changeMode(value)}
+                className={cn(
+                  "rounded px-3 py-1.5 font-medium transition-colors",
+                  mode === value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
-          <Select value={storeId} onValueChange={onStoreChange}>
-            <SelectTrigger className="max-w-sm">
-              <SelectValue placeholder="選擇店家" />
-            </SelectTrigger>
-            <SelectContent>
-              {stores.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {mode === "case" ? (
+            caseCombobox
+          ) : (
+            <Select
+              value={storeId}
+              onValueChange={(v) => selectStore(v, true)}
+            >
+              <SelectTrigger className="max-w-sm">
+                <SelectValue placeholder="選擇店家" />
+              </SelectTrigger>
+              <SelectContent>
+                {stores.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardContent>
       </Card>
 
-      {storeId ? (
+      {primaryChosen ? (
         <>
           {/* Quick add */}
           <Card>
@@ -295,49 +423,26 @@ export function DistributeManager({
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_8rem_7rem_auto] sm:items-end">
                 <div className="space-y-1.5">
-                  <Label>個案</Label>
-                  <Popover open={caseOpen} onOpenChange={setCaseOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={caseOpen}
-                        className="w-full justify-between font-normal"
-                      >
-                        {selectedCase ? selectedCase.name : "選擇個案"}
-                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="搜尋個案姓名…" />
-                        <CommandList>
-                          <CommandEmpty>查無個案</CommandEmpty>
-                          <CommandGroup>
-                            {cases.map((c) => (
-                              <CommandItem
-                                key={c.id}
-                                value={c.name}
-                                onSelect={() => {
-                                  setCaseId(c.id);
-                                  setCaseOpen(false);
-                                  setError(null);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 size-4",
-                                    caseId === c.id ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                                {c.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <Label>{mode === "case" ? "店家" : "個案"}</Label>
+                  {mode === "case" ? (
+                    <Select
+                      value={storeId}
+                      onValueChange={(v) => selectStore(v, false)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="選擇店家" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stores.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    caseCombobox
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -386,20 +491,26 @@ export function DistributeManager({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                本月發券紀錄（共 {storeTotal} 張）
+                {mode === "case"
+                  ? `本月發券（${
+                      caseName.get(caseId) ?? "個案"
+                    } · 共 ${ledgerTotal} 張）`
+                  : `本月發券紀錄（共 ${ledgerTotal} 張）`}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {storeRows.length === 0 ? (
+              {ledgerRows.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  此店家本月尚無發券紀錄。
+                  {mode === "case"
+                    ? "此個案本月尚無發券紀錄。"
+                    : "此店家本月尚無發券紀錄。"}
                 </p>
               ) : (
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>個案</TableHead>
+                        <TableHead>{mode === "case" ? "店家" : "個案"}</TableHead>
                         <TableHead className="w-24">日期</TableHead>
                         <TableHead>流水號</TableHead>
                         <TableHead className="w-16 text-right">張數</TableHead>
@@ -407,8 +518,8 @@ export function DistributeManager({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {storeRows.map((row) => (
-                        <TableRow key={row.caseId}>
+                      {ledgerRows.map((row) => (
+                        <TableRow key={row.key}>
                           <TableCell className="font-medium">{row.name}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {row.dateLabel}
@@ -423,7 +534,11 @@ export function DistributeManager({
                               size="icon"
                               aria-label={`移除 ${row.name} 的紀錄`}
                               onClick={() =>
-                                setRemoving({ caseId: row.caseId, name: row.name })
+                                setRemoving({
+                                  storeId: row.storeId,
+                                  caseId: row.caseId,
+                                  name: row.name,
+                                })
                               }
                             >
                               <Trash2 className="size-4 text-destructive" />
@@ -440,7 +555,7 @@ export function DistributeManager({
         </>
       ) : (
         <p className="rounded-md border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-          請先選擇店家。
+          {mode === "case" ? "請先選擇個案。" : "請先選擇店家。"}
         </p>
       )}
 
@@ -460,7 +575,8 @@ export function DistributeManager({
           <AlertDialogHeader>
             <AlertDialogTitle>移除發券紀錄？</AlertDialogTitle>
             <AlertDialogDescription>
-              將移除「{removing?.name}」在此店家本月的所有發券紀錄。可重新輸入。
+              將移除「{removing?.name}」在此
+              {mode === "case" ? "個案" : "店家"}本月的所有發券紀錄。可重新輸入。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
