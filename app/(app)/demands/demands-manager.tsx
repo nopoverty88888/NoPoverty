@@ -16,6 +16,8 @@ export type DemandStore = {
   storeId: string;
   name: string;
   quantity: number;
+  /** 上月未使用（上月需求 − 上月已回收），可折抵本月要購買的量。 */
+  lastUnused: number;
 };
 
 type DemandRow = {
@@ -30,12 +32,14 @@ export function DemandsManager({
   ngoId,
   userId,
   yearMonth,
+  prevMonth,
   stores,
   submittedAt,
 }: {
   ngoId: string;
   userId: string;
   yearMonth: string;
+  prevMonth: string;
   stores: DemandStore[];
   submittedAt: string | null;
 }) {
@@ -55,6 +59,16 @@ export function DemandsManager({
   function setQuantity(storeId: string, value: string) {
     setQuantities((prev) => ({ ...prev, [storeId]: value }));
   }
+
+  // 本月建議購買 = 本月需求 − 上月未使用（不小於 0）。純建議，供代表參考，
+  // 不會自動改動結算金額（見 2026-07-03 立心 meeting）。
+  function suggestedBuy(store: DemandStore): number {
+    const want = Number(quantities[store.storeId]);
+    const demand = Number.isFinite(want) && want > 0 ? want : 0;
+    return Math.max(0, demand - store.lastUnused);
+  }
+
+  const anyLeftover = stores.some((s) => s.lastUnused > 0);
 
   /** Validate every input; returns rows to upsert, or null (after a toast). */
   function buildRows(): DemandRow[] | null {
@@ -149,6 +163,13 @@ export function DemandsManager({
         </p>
       )}
 
+      {anyLeftover ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          「上月未使用」= {prevMonth} 需求 − 該月已回收，可折抵本月要購買的量。
+          下方「本月建議購買」＝本月需求 − 上月未使用（僅供參考，不影響結算金額）。
+        </p>
+      ) : null}
+
       {stores.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           尚無店家，請先到「店家」新增。
@@ -157,20 +178,27 @@ export function DemandsManager({
         <>
           <ul className="divide-y rounded-md border">
             {stores.map((store) => (
-              <li
-                key={store.storeId}
-                className="flex items-center justify-between gap-3 p-3"
-              >
-                <span className="min-w-0 truncate">{store.name}</span>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  aria-label={`${store.name} 需求張數`}
-                  value={quantities[store.storeId] ?? ""}
-                  onChange={(e) => setQuantity(store.storeId, e.target.value)}
-                  className="w-24 text-right"
-                />
+              <li key={store.storeId} className="space-y-1 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate">{store.name}</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    aria-label={`${store.name} 需求張數`}
+                    value={quantities[store.storeId] ?? ""}
+                    onChange={(e) => setQuantity(store.storeId, e.target.value)}
+                    className="w-24 text-right"
+                  />
+                </div>
+                {store.lastUnused > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    上月未使用 {store.lastUnused} 張 →{" "}
+                    <span className="font-medium text-amber-700">
+                      本月建議購買 {suggestedBuy(store)} 張
+                    </span>
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

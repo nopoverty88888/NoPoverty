@@ -22,6 +22,14 @@ export function nextYearMonth(value: string): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/** The month before a 'YYYY-MM' string, e.g. "2027-01" → "2026-12". */
+export function prevYearMonth(value: string): string {
+  const [y, m] = value.split("-").map(Number);
+  // Date month is 0-based, so `m - 2` lands on the previous month.
+  const d = new Date(Date.UTC(y, m - 2, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 /**
  * Current month as 'YYYY-MM', computed in **Asia/Taipei** regardless of the
  * server's timezone. (Taiwan-only app; a UTC server would otherwise flip the

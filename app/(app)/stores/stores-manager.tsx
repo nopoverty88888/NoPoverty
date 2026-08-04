@@ -49,6 +49,7 @@ import {
 export type StoreRow = {
   id: string;
   name: string;
+  manager_name: string | null;
   address: string | null;
   contact: string | null;
 };
@@ -74,12 +75,12 @@ export function StoresManager({
 
   const form = useForm<StoreInput>({
     resolver: zodResolver(storeInputSchema),
-    defaultValues: { name: "", address: "", contact: "" },
+    defaultValues: { name: "", manager_name: "", address: "", contact: "" },
   });
 
   function openCreate() {
     setEditing(null);
-    form.reset({ name: "", address: "", contact: "" });
+    form.reset({ name: "", manager_name: "", address: "", contact: "" });
     setFormOpen(true);
   }
 
@@ -87,6 +88,7 @@ export function StoresManager({
     setEditing(s);
     form.reset({
       name: s.name,
+      manager_name: s.manager_name ?? "",
       address: s.address ?? "",
       contact: s.contact ?? "",
     });
@@ -97,6 +99,7 @@ export function StoresManager({
     setSubmitting(true);
     const payload = {
       name: values.name,
+      manager_name: emptyToNull(values.manager_name),
       address: emptyToNull(values.address),
       contact: emptyToNull(values.contact),
     };
@@ -147,6 +150,7 @@ export function StoresManager({
             <TableHeader>
               <TableRow>
                 <TableHead>店家名稱</TableHead>
+                <TableHead>負責人</TableHead>
                 <TableHead>地址</TableHead>
                 <TableHead>聯絡資訊</TableHead>
                 <TableHead className="w-24 text-right">操作</TableHead>
@@ -156,6 +160,9 @@ export function StoresManager({
               {initialStores.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {s.manager_name ?? "—"}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {s.address ?? "—"}
                   </TableCell>
@@ -200,6 +207,19 @@ export function StoresManager({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>店家名稱</FormLabel>
+                    <FormControl>
+                      <Input autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="manager_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>負責人 / 店主姓名（選填）</FormLabel>
                     <FormControl>
                       <Input autoComplete="off" {...field} />
                     </FormControl>

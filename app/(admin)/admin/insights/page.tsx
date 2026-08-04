@@ -44,7 +44,10 @@ export default async function AdminInsightsPage({
       .from("voucher_collections")
       .select("collected_at_store_id, is_cross_store")
       .eq("year_month", yearMonth),
-    supabase.from("case_usage_view").select("case_name").eq("year_month", yearMonth),
+    supabase
+      .from("case_usage_view")
+      .select("case_name, quantity")
+      .eq("year_month", yearMonth),
     supabase.from("stores").select("id, name, owner_ngo_rep_id"),
     supabase.from("users").select("id, ngo_id"),
     supabase.from("ngos").select("id, name"),
@@ -88,10 +91,12 @@ export default async function AdminInsightsPage({
     .sort((a, b) => b.cross - a.cross)
     .slice(0, TOP_N);
 
+  // 個案兌換以張數加總（與 reports/usage 一致）——活動採購／便當外送等一張紙代表
+  // 多張的券也計入真實張數，避免立心儀表板與 NGO 報表數字不一致。
   const caseCount = new Map<string, number>();
   for (const u of usage ?? []) {
     const name = u.case_name ?? "（個案）";
-    caseCount.set(name, (caseCount.get(name) ?? 0) + 1);
+    caseCount.set(name, (caseCount.get(name) ?? 0) + (u.quantity ?? 1));
   }
   const topCases = Array.from(caseCount.entries())
     .map(([name, count]) => ({ name, count }))
@@ -172,7 +177,7 @@ export default async function AdminInsightsPage({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">個案使用次數 Top {TOP_N}</CardTitle>
+            <CardTitle className="text-base">個案兌換張數 Top {TOP_N}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {topCases.length === 0 ? (
@@ -184,7 +189,7 @@ export default async function AdminInsightsPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead>個案</TableHead>
-                    <TableHead className="text-right">使用次數</TableHead>
+                    <TableHead className="text-right">兌換張數</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

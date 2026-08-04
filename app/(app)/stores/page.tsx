@@ -15,7 +15,7 @@ export default async function StoresPage() {
   // return every NGO's stores).
   const { data: stores } = await supabase
     .from("stores")
-    .select("id, name, address, contact")
+    .select("id, name, manager_name, address, contact")
     .eq("owner_ngo_rep_id", user.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });

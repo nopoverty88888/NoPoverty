@@ -6,6 +6,7 @@ import { z } from "zod";
  */
 export const storeInputSchema = z.object({
   name: z.string().trim().min(1, "請輸入店家名稱").max(100, "名稱過長"),
+  manager_name: z.string().trim().max(50, "負責人姓名過長").optional(),
   address: z.string().trim().max(200, "地址過長").optional(),
   contact: z.string().trim().max(100, "聯絡資訊過長").optional(),
 });

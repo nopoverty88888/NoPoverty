@@ -527,6 +527,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
+          manager_name: string | null
           name: string
           owner_ngo_rep_id: string
         }
@@ -536,6 +537,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          manager_name?: string | null
           name: string
           owner_ngo_rep_id: string
         }
@@ -545,6 +547,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          manager_name?: string | null
           name?: string
           owner_ngo_rep_id?: string
         }
