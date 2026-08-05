@@ -21,7 +21,7 @@ export default async function CasesPage() {
   // last 4 — the raw id_number is not readable by any client (privacy).
   const { data: rows } = await supabase
     .from("my_cases")
-    .select("id, name, note, id_number_last4, case_type")
+    .select("id, name, note, id_number_last4")
     .order("created_at", { ascending: false });
 
   const cases: CaseRow[] = (rows ?? [])
@@ -31,7 +31,6 @@ export default async function CasesPage() {
       name: r.name as string,
       note: r.note,
       idLast4: r.id_number_last4 ?? "",
-      caseType: r.case_type ?? "individual",
     }));
 
   return (

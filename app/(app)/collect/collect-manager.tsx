@@ -387,7 +387,7 @@ export function CollectManager({
               <CardHeader>
                 <CardTitle className="text-base">回收登錄</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  他店的券請改選「他店券」（才計補款）。同一張券若手寫多張券的金額（如活動採購／便當外送），把「張數」改成該數字。
+                  本單位自己拿去用的券不必先發券，回收時直接登錄即可。他店的券請改選「他店券」（才計補款）；一張券若手寫多張金額（如活動採購／便當外送），把「張數」改成該數字。
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
