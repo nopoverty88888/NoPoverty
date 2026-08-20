@@ -115,12 +115,20 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase REST API
+      - name: Ping Supabase (Auth health)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl --fail \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/?select=*"
+          curl --fail --show-error --silent \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/auth/v1/health"
 ```
+
+> **Do NOT ping `/rest/v1/?select=*`.** That REST root is now service_role-only,
+> and the `anon` role has no table grants (auth is via the `authenticated` role +
+> RLS), so an anon key gets `401 Invalid API key` there. Ping `/auth/v1/health`
+> instead — it returns 200 for any valid apikey and keeps the project active.
 
 **Required GitHub secrets** (Settings → Secrets and variables → Actions):
 - `SUPABASE_URL` — e.g. `https://xxxxx.supabase.co`
