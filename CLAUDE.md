@@ -33,9 +33,7 @@ Key business rule: vouchers cost NT$100 each; if a case uses an NGO's voucher at
 
 Repo layout (single Next.js app, no monorepo needed):
 ```
-/.github
-  /workflows
-    keep-alive.yml      # pings Supabase every 5 days to prevent free-tier pause
+/vercel.json            # Vercel Cron: daily GET /api/keep-alive (Supabase free-tier keep-alive)
 /app
   /(admin)/admin        # Web admin for 立心 (role=lixin only) — URLs are /admin/*
     /dashboard
@@ -57,7 +55,7 @@ Repo layout (single Next.js app, no monorepo needed):
   /reports              # Shared DESKTOP reports — ANY authenticated user; RLS-scoped
     /usage /settlement /stores /demands   # 立心 sees all NGOs, NGO 代表 sees own; each downloadable as CSV
   /login                # W1 / M1 login
-  /api                  # Only for server-side ops (e.g. admin create user)
+  /api                  # Only for server-side ops (admin create user, keep-alive cron)
 /components
   /ui                   # shadcn primitives
   /shared               # VoucherSerialInput, CameraScanner, etc.
@@ -100,41 +98,38 @@ pnpm test
 
 ## Supabase keep-alive (free tier)
 
-The Supabase free tier pauses a project after 7 days of no API requests. To prevent this, this repo includes a GitHub Action that pings the Supabase REST API every 5 days.
+Supabase pauses a Free-plan project after 7 days without **database** activity.
+This app's usage is a monthly cycle (發券 at month start, 月底回收 at month end)
+with quiet weeks in between, so a scheduled ping is required in production too,
+not only during development. **Do not remove it.**
 
-**File:** `.github/workflows/keep-alive.yml`
+**How it works (no GitHub Action, no secrets to copy into a second system):**
+- `vercel.json` declares a Vercel Cron: `GET /api/keep-alive` once a day
+  (03:00 UTC = 11:00 台北; Hobby plan allows at most once per day, fires within that hour).
+- `app/api/keep-alive/route.ts` checks `Authorization: Bearer $CRON_SECRET`, then runs a
+  real query (`select count(*) from ngos`) with the service-role client. Anything other
+  than 200 shows up as a failed run in Vercel → Project → Cron Jobs / Logs.
+- Env vars live on the Vercel project (Settings → Environment Variables): the three
+  Supabase keys the app already uses, plus `CRON_SECRET` (any long random string, production).
 
-```yaml
-name: Keep Supabase Alive
-on:
-  schedule:
-    - cron: '0 12 */5 * *'   # every 5 days at 12:00 UTC
-  workflow_dispatch:           # also runnable manually
+**Lessons from the Sep 2026 pause — read before "simplifying" this:**
+- `/auth/v1/health` returns 200 but does **not** count as activity. The old GitHub Action
+  was green on 2026-09-01 and the project was still paused by 2026-09-06. Only a query that
+  reaches Postgres (REST table read, RPC, or a direct connection) resets the timer.
+- `/rest/v1/?select=*` (the REST root) is service_role-only, and `anon` has no table grants
+  here, so an anon-key ping gets `401`. That is why the route uses the service-role client.
+- GitHub scheduled workflows are auto-disabled after 60 days without repo activity, a real
+  risk for a repo that only changes occasionally. Vercel Cron has no such rule.
 
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ping Supabase (Auth health)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          curl --fail --show-error --silent \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/auth/v1/health"
+**If the project is paused anyway** (symptom: `<ref>.supabase.co` no longer resolves in DNS,
+login fails): Supabase dashboard → project → **Restore**, or with the logged-in Supabase CLI:
+
+```bash
+curl -X POST -H "Authorization: Bearer $(cat ~/.supabase/access-token)" \
+  https://api.supabase.com/v1/projects/<project-ref>/restore
 ```
 
-> **Do NOT ping `/rest/v1/?select=*`.** That REST root is now service_role-only,
-> and the `anon` role has no table grants (auth is via the `authenticated` role +
-> RLS), so an anon key gets `401 Invalid API key` there. Ping `/auth/v1/health`
-> instead — it returns 200 for any valid apikey and keeps the project active.
-
-**Required GitHub secrets** (Settings → Secrets and variables → Actions):
-- `SUPABASE_URL` — e.g. `https://xxxxx.supabase.co`
-- `SUPABASE_ANON_KEY` — the `anon public` key
-
-This action is **essential during development and quiet months** (e.g. when no NGO 代表 is actively using the system). Once the app is in daily production use, this can be removed.
+Data is kept; restore takes a few minutes. Then check Vercel → Cron Jobs for why the ping stopped.
 
 ## PWA install flow
 
